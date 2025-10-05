@@ -4,6 +4,9 @@ import { params, state, store } from "./store";
 import { setMetaData } from "../modules/setMetadata";
 import { getDB } from "./libraryUtils";
 import getStreamData from "../modules/getStreamData";
+import { Equalizer } from './equalizer';
+
+let eq: Equalizer | undefined;
 
 export default async function player(id: string | null = '') {
 
@@ -50,6 +53,7 @@ export default async function player(id: string | null = '') {
   });
 
   if (store.player.legacy) {
+    audio.crossOrigin = "anonymous"; // <-- Add this line
     audio.src = data.hls;
     audio.load();
   }
@@ -73,7 +77,6 @@ export default async function player(id: string | null = '') {
 
   if (location.pathname === '/')
     history.replaceState({}, '', location.origin + '?s=' + params.get('s'));
-
 
 
   if (state.enqueueRelatedStreams)
@@ -105,6 +108,17 @@ export default async function player(id: string | null = '') {
         }, 1e5);
       });
 
+  // Initialize equalizer after audio src is set
+  if (!eq){
+    console.log("113",);
+     eq = new Equalizer(audio);}
+
+  // Example: set initial gains
+  eq.setBandGain('bass', 3);    // boost bass
+  eq.setBandGain('mid', 0);     // neutral mid
+  eq.setBandGain('treble', 0);  // neutral treble
+
+  // You can expose UI controls to call eq.setBandGain(...)
 }
 
 

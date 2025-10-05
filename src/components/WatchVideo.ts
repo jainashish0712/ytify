@@ -119,6 +119,7 @@ export default async function(dialog: HTMLDialogElement) {
       if (store.api.index < store.api.invidious.length) {
         const proxy = store.api.invidious[store.api.index];
         video.src = video.src.replace(origin, proxy);
+        audio.crossOrigin = "anonymous"; // <-- Add this line
         audio.src = audio.src.replace(origin, proxy);
 
         store.api.index++;
@@ -172,7 +173,7 @@ export default async function(dialog: HTMLDialogElement) {
         }
       })
       : ''}
-    
+
       <button @click=${() => {
       player(store.actionsMenu.id);
       close();
@@ -191,6 +192,7 @@ export default async function(dialog: HTMLDialogElement) {
   `);
 
   const stream = await preferredStream(handleXtags(audioArray));
+    audio.crossOrigin = "anonymous"; // <-- Add this line
   audio.src = proxyHandler(stream.url, true);
   audio.currentTime = video.currentTime;
   loadingScreen.close();

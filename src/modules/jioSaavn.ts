@@ -35,7 +35,7 @@ export default function() {
         medium: downloadUrl.length - 2,
         high: downloadUrl.length - 1
       }[state.quality]];
-
+  audio.crossOrigin = "anonymous"; // <-- Add this line
       audio.src = url.replace('http:', 'https:');
       qualityView.textContent = quality + ' AAC';
       params.set('s', id);
