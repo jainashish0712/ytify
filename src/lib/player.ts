@@ -115,8 +115,8 @@ export default async function player(id: string | null = '') {
 
   // Example: set initial gains
   eq.setBandGain('bass', 3);    // boost bass
-  eq.setBandGain('mid', 0);     // neutral mid
-  eq.setBandGain('treble', 0);  // neutral treble
+  eq.setBandGain('mid', 10);     // neutral mid
+  eq.setBandGain('treble', -10);  // neutral treble
 
   // You can expose UI controls to call eq.setBandGain(...)
 }

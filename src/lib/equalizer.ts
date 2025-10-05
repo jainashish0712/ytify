@@ -19,6 +19,7 @@ export class Equalizer {
     // Bass
     this.filters[0].type = 'lowshelf';
     this.filters[0].frequency.value = 60;
+    this.filters[1].Q.value = 0.7;
 
     // Mid
     this.filters[1].type = 'peaking';
