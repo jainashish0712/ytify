@@ -1,10 +1,9 @@
-// Simple 3-band equalizer using Web Audio API
-
 export class Equalizer {
   private ctx: AudioContext;
   private source: MediaElementAudioSourceNode;
   private filters: BiquadFilterNode[];
   private convolver: ConvolverNode;
+  private preamp: GainNode;
   private isConvolverEnabled: boolean = false;
 
   constructor(audio: HTMLAudioElement) {
@@ -30,6 +29,10 @@ export class Equalizer {
     // Convolver for reverb
     this.convolver = this.ctx.createConvolver();
 
+    // Preamp gain node (for +3dB when convolver is enabled)
+    this.preamp = this.ctx.createGain();
+    this.preamp.gain.value = 4; // default unity gain
+
     // Default: source -> EQ -> destination
     this.connectChain(false);
 
@@ -46,6 +49,7 @@ export class Equalizer {
     // Disconnect everything first
     this.source.disconnect();
     this.filters.forEach(f => f.disconnect());
+    this.preamp.disconnect();
     this.convolver.disconnect();
 
     // Reconnect in order
@@ -54,7 +58,10 @@ export class Equalizer {
     this.filters[1].connect(this.filters[2]);
 
     if (useConvolver) {
-      this.filters[2].connect(this.convolver);
+      // Apply +3dB preamp gain before convolver
+      this.preamp.gain.value = Math.pow(10, 12 / 20); // ≈ 1.412
+      this.filters[2].connect(this.preamp);
+      this.preamp.connect(this.convolver);
       this.convolver.connect(this.ctx.destination);
     } else {
       this.filters[2].connect(this.ctx.destination);
