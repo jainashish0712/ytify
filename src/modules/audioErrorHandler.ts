@@ -52,8 +52,9 @@ export default function(audio: HTMLAudioElement) {
     function useCobalt() {
       getDownloadLink(id)
         .then(_ => {
-          if (_)
-            audio.src = _;
+          if (_){
+audio.crossOrigin = "anonymous"; // <-- Add before setting src
+audio.src = _;}
           else throw new Error();
         })
         .catch(() => {

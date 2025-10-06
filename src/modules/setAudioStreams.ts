@@ -26,6 +26,7 @@ export default async function(audioStreams: AudioStream[],
 
   const stream = await preferredStream(handleXtags(audioStreams));
   qualityView.textContent = stream.quality + ' ' + stream.codec;
+receiver.crossOrigin = "anonymous";
   receiver.src = proxyHandler(stream.url, prefetch);
 
 }

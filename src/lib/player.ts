@@ -109,14 +109,26 @@ export default async function player(id: string | null = '') {
       });
 
   // Initialize equalizer after audio src is set
-  if (!eq){
+  if (!eq) {
     console.log("113",);
-     eq = new Equalizer(audio);}
+    eq = new Equalizer(audio);
+  }
 
   // Example: set initial gains
   eq.setBandGain('bass', 3);    // boost bass
-  eq.setBandGain('mid', 10);     // neutral mid
-  eq.setBandGain('treble', -10);  // neutral treble
+  eq.setBandGain('mid', 6);     // neutral mid
+  eq.setBandGain('treble', -4);  // neutral treble
+
+  const freqs = new Float32Array([60, 1000, 3000]);
+  const mag = eq.getFrequencyResponse('bass', freqs);
+  console.log(mag);
+
+  // await eq.loadImpulseResponse('/irs/Orchestra.wav');
+  await eq.loadImpulseResponse('/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100.irs');
+  const toggle = document.getElementById('convolverToggle') as HTMLInputElement;
+  toggle.addEventListener('change', () => {
+    eq.enableConvolver(toggle.checked);
+  });
 
   // You can expose UI controls to call eq.setBandGain(...)
 }
