@@ -115,16 +115,16 @@ export default async function player(id: string | null = '') {
   }
 
   // Example: set initial gains
-  eq.setBandGain('bass', 3);    // boost bass
-  eq.setBandGain('mid', 6);     // neutral mid
-  eq.setBandGain('treble', -4);  // neutral treble
+  eq.setBandGain('bass', 8);    // boost bass
+  eq.setBandGain('mid', 3);     // neutral mid
+  eq.setBandGain('treble', -8);  // neutral treble
 
   const freqs = new Float32Array([60, 1000, 3000]);
   const mag = eq.getFrequencyResponse('bass', freqs);
   console.log(mag);
 
   // await eq.loadImpulseResponse('/irs/Orchestra.wav');
-  await eq.loadImpulseResponse('/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100.irs');
+  await eq.loadImpulseResponse('/irs/Joe0Bloggs 3D headphones IRS--surround upmix-48000.irs');
   const toggle = document.getElementById('convolverToggle') as HTMLInputElement;
   toggle.addEventListener('change', () => {
     eq.enableConvolver(toggle.checked);
