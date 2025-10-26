@@ -24,6 +24,9 @@ export class Equalizer {
     // Create AudioContext (do NOT force sampleRate on iOS/Safari)
     this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
 
+    // Register unlock/resume behaviour (will attempt resume now or wait for gesture)
+    this.unlockAudioContext();
+
     // Create filters
     this.filters = [
       this.ctx.createBiquadFilter(),
@@ -55,7 +58,8 @@ export class Equalizer {
 
     // Ensure context is resumed / unlocked on play
     audio.addEventListener('play', () => {
-      this.unlockAndResume();
+      // try to resume/prime on play as well
+      this.unlockAudioContext();
     });
   }
 
@@ -66,29 +70,84 @@ export class Equalizer {
     return isIOS || isSafari;
   }
 
-  /** Try to “unlock” WebAudio and resume context */
-  private unlockAndResume() {
-    if (this.ctx.state !== 'running') {
-      this.ctx.resume().catch(e => {
-        console.warn("AudioContext resume error:", e);
+  /** Public: whether this platform likely needs a user gesture to unlock WebAudio */
+  public requiresUserGesture(): boolean {
+    return this.isIOSorSafari();
+  }
+
+  /** Public: whether AudioContext is currently running */
+  public isContextRunning(): boolean {
+    return this.ctx.state === 'running';
+  }
+
+  /**
+   * Robust unlock: try to resume immediately; if not possible, wait for a user gesture (click/touchstart).
+   * Returns once context is running and a small silent buffer has been played to prime the engine.
+   */
+  public async unlockAudioContext(): Promise<void> {
+    if (this.ctx.state === 'running') return;
+
+    // Try immediate resume
+    try {
+      await this.ctx.resume();
+      await this.primeSilentBuffer();
+      return;
+    } catch (e) {
+      // resume may reject on some platforms when not triggered by gesture
+    }
+
+    // If still suspended, create a promise that resolves on the first user gesture
+    if (this.ctx.state === 'suspended') {
+      await new Promise<void>((resolve) => {
+        const onGesture = async () => {
+          try {
+            await this.ctx.resume();
+            await this.primeSilentBuffer();
+          } catch (err) {
+            // ignore, but still resolve so caller can continue
+            console.warn('AudioContext resume after gesture failed:', err);
+          } finally {
+            document.body.removeEventListener('click', onGesture);
+            document.body.removeEventListener('touchstart', onGesture);
+            resolve();
+          }
+        };
+        document.body.addEventListener('click', onGesture, { once: true });
+        document.body.addEventListener('touchstart', onGesture, { once: true });
       });
     }
-    // Play a silent buffer to “prime” the engine
-    const buf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
-    const src = this.ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(this.ctx.destination);
-    src.start();
+  }
+
+  /** Helper: resume (if needed) and play a tiny silent buffer to prime the engine */
+  private async primeSilentBuffer(): Promise<void> {
+    try {
+      if (this.ctx.state !== 'running') {
+        await this.ctx.resume();
+      }
+    } catch (e) {
+      // ignore
+    }
+    try {
+      const buf = this.ctx.createBuffer(1, 1, this.ctx.sampleRate);
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(this.ctx.destination);
+      // start and stop quickly
+      src.start(0);
+      src.stop(0.01);
+    } catch (e) {
+      console.warn('priming silent buffer failed:', e);
+    }
   }
 
   /** Connect the audio graph, optionally with convolver */
   private connectChain(useConvolver: boolean) {
     // Disconnect all existing nodes
-    if (this.mediaSourceNode) this.mediaSourceNode.disconnect();
-    if (this.bufferSourceNode) this.bufferSourceNode.disconnect();
-    this.filters.forEach(f => f.disconnect());
-    this.preamp.disconnect();
-    this.convolver.disconnect();
+    if (this.mediaSourceNode) try { this.mediaSourceNode.disconnect(); } catch {}
+    if (this.bufferSourceNode) try { this.bufferSourceNode.disconnect(); } catch {}
+    this.filters.forEach(f => { try { f.disconnect(); } catch {} });
+    try { this.preamp.disconnect(); } catch {}
+    try { this.convolver.disconnect(); } catch {}
 
     // Choose which input node to use
     let inputNode: AudioNode | null = null;
@@ -123,6 +182,9 @@ export class Equalizer {
 
   /** Load IR file, decode, store buffer */
   async loadImpulseResponse(url: string) {
+    // Ensure context unlocked/resumed before decode on restricted platforms
+    await this.unlockAudioContext();
+
     const resp = await fetch(url);
     const arrayBuffer = await resp.arrayBuffer();
     try {
@@ -187,6 +249,9 @@ export class Equalizer {
   /** Switch to buffer-source mode: load the audio via fetch / decode and play via buffer source */
   async switchToBufferSourceMode() {
     try {
+      // ensure context unlocked/resumed before decode on restricted platforms
+      await this.unlockAudioContext();
+
       const resp = await fetch(this.sourceElement.src);
       const arrayBuf = await resp.arrayBuffer();
       const audioBuf = await this.ctx.decodeAudioData(arrayBuf);
