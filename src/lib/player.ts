@@ -32,7 +32,7 @@ export default async function player(id: string | null = '') {
       return import('../modules/jioSaavn').then(mod => mod.default());
   }
 
-  title.textContent = 'Fetching Data...';
+  title.textContent = 'Fetchng Data...';
 
   const data = await getStreamData(id);
 

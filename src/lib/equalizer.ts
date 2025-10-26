@@ -13,11 +13,16 @@ export class Equalizer {
   constructor(audio: HTMLAudioElement) {
     this.sourceElement = audio;
 
-    // Create AudioContext (optionally with sampleRate hint)
-    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)({
-      // on some platforms, it helps to force 44100 or match device sample rate
-      sampleRate: 44100
-    });
+    // Ensure media element allows cross-origin decoding (important for convolver/IR)
+    // set before creating MediaElementSource
+    try {
+      this.sourceElement.crossOrigin = 'anonymous';
+    } catch (e) {
+      // ignore if not allowed
+    }
+
+    // Create AudioContext (do NOT force sampleRate on iOS/Safari)
+    this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
 
     // Create filters
     this.filters = [
@@ -122,8 +127,39 @@ export class Equalizer {
     const arrayBuffer = await resp.arrayBuffer();
     try {
       const buf = await this.ctx.decodeAudioData(arrayBuffer);
-      this.irBuffer = buf;
-      this.convolver.buffer = buf;
+
+      // If IR has more than 2 channels, downmix to stereo (Safari-friendly)
+      let irToUse: AudioBuffer = buf;
+      const ch = buf.numberOfChannels;
+      if (ch === 1) {
+        // duplicate mono -> stereo
+        const stereo = this.ctx.createBuffer(2, buf.length, buf.sampleRate);
+        const data = buf.getChannelData(0);
+        stereo.getChannelData(0).set(data);
+        stereo.getChannelData(1).set(data);
+        irToUse = stereo;
+      } else if (ch > 2) {
+        // downmix N channels into stereo: average even -> left, odd -> right
+        const stereo = this.ctx.createBuffer(2, buf.length, buf.sampleRate);
+        const left = stereo.getChannelData(0);
+        const right = stereo.getChannelData(1);
+        const evenCount = Math.ceil(ch / 2);
+        const oddCount = Math.floor(ch / 2);
+        // zero-fill
+        for (let i = 0; i < buf.length; i++) { left[i] = 0; right[i] = 0; }
+        for (let c = 0; c < ch; c++) {
+          const src = buf.getChannelData(c);
+          if ((c % 2) === 0) { // even -> left
+            for (let i = 0; i < buf.length; i++) left[i] += src[i] / evenCount;
+          } else { // odd -> right
+            for (let i = 0; i < buf.length; i++) right[i] += src[i] / oddCount;
+          }
+        }
+        irToUse = stereo;
+      }
+
+      this.irBuffer = irToUse;
+      this.convolver.buffer = irToUse;
       // Reconnect chain (attempt to enable)
       this.connectChain(true);
     } catch (err) {
@@ -132,10 +168,20 @@ export class Equalizer {
   }
 
   /** Enable or disable convolver (if possible) */
-  enableConvolver(enable: boolean) {
-    if (enable !== this.isConvolverEnabled) {
-      this.connectChain(enable);
+  async enableConvolver(enable: boolean) {
+    if (enable === this.isConvolverEnabled) return;
+
+    // On iOS/Safari prefer buffer-source path for convolver (media element path can be unreliable)
+    if (enable && this.isIOSorSafari() && !this.usingBufferSource) {
+      try {
+        await this.switchToBufferSourceMode();
+      } catch (err) {
+        console.warn("Buffer-source fallback failed:", err);
+      }
     }
+
+    // Reconnect chain with the requested convolver state (connectChain checks irBuffer)
+    this.connectChain(enable);
   }
 
   /** Switch to buffer-source mode: load the audio via fetch / decode and play via buffer source */
