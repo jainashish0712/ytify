@@ -31,12 +31,12 @@ export class Equalizer {
       this.ctx.createBiquadFilter(),
     ];
     this.filters[0].type = 'lowshelf';
-    this.filters[0].frequency.value = 60;
+    this.filters[0].frequency.value = 55;
     this.filters[1].type = 'peaking';
     this.filters[1].frequency.value = 1000;
     this.filters[1].Q.value = 1;
     this.filters[2].type = 'highshelf';
-    this.filters[2].frequency.value = 3000;
+    this.filters[2].frequency.value = 9000;
 
     this.convolver = this.ctx.createConvolver();
     this.preamp = this.ctx.createGain();
