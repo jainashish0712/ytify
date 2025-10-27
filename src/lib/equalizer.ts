@@ -9,6 +9,10 @@ export class Equalizer {
   private isConvolverEnabled: boolean = false;
   private usingBufferSource: boolean = false;  // whether fallback path in use
   private irBuffer: AudioBuffer | null = null;
+  private cachedAudioBuffer: AudioBuffer | null = null;
+  private boundPlayHandler: (() => void) | null = null;
+  private boundPauseHandler: (() => void) | null = null;
+  private boundSeekingHandler: (() => void) | null = null;
 
   constructor(audio: HTMLAudioElement) {
     this.sourceElement = audio;
@@ -45,13 +49,8 @@ export class Equalizer {
     this.preamp = this.ctx.createGain();
     this.preamp.gain.value = 1;
 
-    // Try to set up mediaElement path
-    try {
-      this.mediaSourceNode = this.ctx.createMediaElementSource(audio);
-    } catch (err) {
-      console.warn("createMediaElementSource failed, will fallback to buffer source", err);
-      this.mediaSourceNode = null;
-    }
+    // Force buffer-source mode: do NOT create a MediaElementSource (keeps UI controls but audio routed via buffer)
+    this.mediaSourceNode = null;
 
     // Default initial chain: no convolver
     this.connectChain(false);
@@ -60,6 +59,12 @@ export class Equalizer {
     audio.addEventListener('play', () => {
       // try to resume/prime on play as well
       this.unlockAudioContext();
+    });
+
+    // always use buffer-source mode; start background decode and wire controls
+    // (constructor cannot be async, so start and ignore errors here)
+    this.switchToBufferSourceMode().catch(err => {
+      console.warn("Initial switchToBufferSourceMode failed:", err);
     });
   }
 
@@ -234,7 +239,8 @@ export class Equalizer {
     if (enable === this.isConvolverEnabled) return;
 
     // On iOS/Safari prefer buffer-source path for convolver (media element path can be unreliable)
-    if (enable && this.isIOSorSafari() && !this.usingBufferSource) {
+    if (enable && true && !this.usingBufferSource) {
+    // if (enable && this.isIOSorSafari() && !this.usingBufferSource) {
       try {
         await this.switchToBufferSourceMode();
       } catch (err) {
@@ -255,17 +261,82 @@ export class Equalizer {
       const resp = await fetch(this.sourceElement.src);
       const arrayBuf = await resp.arrayBuffer();
       const audioBuf = await this.ctx.decodeAudioData(arrayBuf);
-      // Create buffer source
-      this.bufferSourceNode = this.ctx.createBufferSource();
-      this.bufferSourceNode.buffer = audioBuf;
-      this.bufferSourceNode.loop = this.sourceElement.loop;
-      this.bufferSourceNode.start(0);
-      // Mark using buffer path
+      // cache decoded buffer for (re)creating BufferSource nodes on play/seek
+      this.cachedAudioBuffer = audioBuf;
+
+      // mute the HTML audio element so only bufferSource is heard
+      try { this.sourceElement.muted = true; } catch {}
+
+      // ensure usingBufferSource flag
       this.usingBufferSource = true;
-      // Reconnect chain
+
+      // attach handlers to sync UI controls -> buffer source
+      if (!this.boundPlayHandler) {
+        this.boundPlayHandler = () => {
+          // create and start buffer source at current element time
+          if (!this.cachedAudioBuffer) return;
+          this._createAndStartBufferSource(this.sourceElement.currentTime);
+        };
+        this.sourceElement.addEventListener('play', this.boundPlayHandler);
+      }
+      if (!this.boundPauseHandler) {
+        this.boundPauseHandler = () => {
+          if (this.bufferSourceNode) {
+            try { this.bufferSourceNode.stop(); } catch {}
+            try { this.bufferSourceNode.disconnect(); } catch {}
+            this.bufferSourceNode = null;
+          }
+        };
+        this.sourceElement.addEventListener('pause', this.boundPauseHandler);
+      }
+      if (!this.boundSeekingHandler) {
+        this.boundSeekingHandler = () => {
+          // if playing, restart bufferSource at new position
+          if (!this.cachedAudioBuffer) return;
+          if (!this.sourceElement.paused) {
+            if (this.bufferSourceNode) {
+              try { this.bufferSourceNode.stop(); } catch {}
+              try { this.bufferSourceNode.disconnect(); } catch {}
+              this.bufferSourceNode = null;
+            }
+            this._createAndStartBufferSource(this.sourceElement.currentTime);
+          }
+        };
+        this.sourceElement.addEventListener('seeking', this.boundSeekingHandler);
+      }
+
+      // if element is already playing, start immediately
+      if (!this.sourceElement.paused) {
+        this._createAndStartBufferSource(this.sourceElement.currentTime);
+      }
+
+      // Reconnect chain (connectChain will pick bufferSourceNode when present)
       this.connectChain(true);
     } catch (err) {
       console.error("switchToBufferSourceMode failed:", err);
+    }
+  }
+
+  /** internal: create a fresh BufferSource and start it at given offset (seconds) */
+  private _createAndStartBufferSource(offsetSeconds: number) {
+    if (!this.cachedAudioBuffer) return;
+    // stop and cleanup previous
+    if (this.bufferSourceNode) {
+      try { this.bufferSourceNode.stop(); } catch {}
+      try { this.bufferSourceNode.disconnect(); } catch {}
+      this.bufferSourceNode = null;
+    }
+    try {
+      const bs = this.ctx.createBufferSource();
+      bs.buffer = this.cachedAudioBuffer;
+      bs.loop = this.sourceElement.loop;
+      this.bufferSourceNode = bs;
+      // Reconnect chain to include the new bufferSourceNode
+      this.connectChain(true);
+      // start at currentTime, with offset matching element's current time
+      bs.start(this.ctx.currentTime, offsetSeconds);
+    } catch (err) {
+      console.error("createAndStartBufferSource failed:", err);
     }
   }
 

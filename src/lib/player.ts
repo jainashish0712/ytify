@@ -173,9 +173,11 @@ export default async function player(id: string | null = '') {
       // normal path: load IR immediately
       await loadIR();
     }
+    eq!.enableConvolver(true);
 
-    const toggle = document.getElementById('convolverToggle') as HTMLInputElement;
-    if (toggle) toggle.addEventListener('change', () => { eq!.enableConvolver(toggle.checked); });
+    // const toggle = document.getElementById('convolverToggle') as HTMLInputElement;
+    // if (toggle) toggle.addEventListener('change', () => { eq!.enableConvolver(toggle.checked); });
+    // if (toggle) toggle.addEventListener('change', () => { eq!.enableConvolver(toggle.checked); });
   };
 
   // If on iOS/Safari, wait for user gesture to initialize EQ; otherwise init immediately.
