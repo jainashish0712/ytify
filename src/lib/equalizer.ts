@@ -14,6 +14,9 @@ export class Equalizer {
   private boundPauseHandler: (() => void) | null = null;
   private boundSeekingHandler: (() => void) | null = null;
 
+
+
+    private pitchSemitones: number = 0.4; // +0.4 semitones
   constructor(audio: HTMLAudioElement) {
     this.sourceElement = audio;
 
@@ -66,6 +69,39 @@ export class Equalizer {
     this.switchToBufferSourceMode().catch(err => {
       console.warn("Initial switchToBufferSourceMode failed:", err);
     });
+  }
+
+  // Add method to calculate playback rate from semitones
+  private semitonesToPlaybackRate(semitones: number): number {
+    return Math.pow(2, semitones / 12);
+  }
+
+  // Add method to set pitch
+  public setPitch(semitones: number): void {
+    this.pitchSemitones = semitones;
+
+    // If we have an active buffer source node, update its playback rate
+    if (this.bufferSourceNode && this.cachedAudioBuffer) {
+      const currentTime = this.sourceElement.currentTime;
+      const wasPlaying = !this.sourceElement.paused;
+
+      // Restart with new pitch if currently playing
+      if (wasPlaying) {
+        this.bufferSourceNode.stop();
+        this.bufferSourceNode = null;
+        this._createAndStartBufferSource(currentTime);
+      }
+    }
+  }
+
+  // Get current pitch setting
+  public getPitch(): number {
+    return this.pitchSemitones;
+  }
+
+  // Reset pitch to normal
+  public resetPitch(): void {
+    this.setPitch(0);
   }
 
   private isIOSorSafari(): boolean {
@@ -330,6 +366,7 @@ export class Equalizer {
       const bs = this.ctx.createBufferSource();
       bs.buffer = this.cachedAudioBuffer;
       bs.loop = this.sourceElement.loop;
+            bs.playbackRate.value = this.semitonesToPlaybackRate(this.pitchSemitones)
       this.bufferSourceNode = bs;
       // Reconnect chain to include the new bufferSourceNode
       this.connectChain(true);

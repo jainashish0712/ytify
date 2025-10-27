@@ -126,6 +126,8 @@ export default async function player(id: string | null = '') {
     eq.setBandGain('bass', 3);    // boost bass
     eq.setBandGain('mid', 6);     // neutral mid
     eq.setBandGain('treble', -4); // neutral treble
+    eq.setPitch(0.41); // pitch
+
 
     const freqs = new Float32Array([60, 1000, 3000]);
     const mag = eq.getFrequencyResponse('bass', freqs);
