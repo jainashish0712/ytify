@@ -120,6 +120,58 @@ export default async function player(id: string | null = '') {
 
   const initEQ = async () => {
     if (eq) return;
+
+    // small helper: show a simple transient toast and brief underline/highlight
+    const showToast = (text = 'Info') => {
+      const id = 'ytify-mini-toast';
+      if (document.getElementById(id)) return;
+      const el = document.createElement('div');
+      el.id = id;
+      el.textContent = '✔ ' + text;
+      Object.assign(el.style, {
+        position: 'fixed',
+        right: '12px',
+        bottom: '12px',
+        background: '#2e7d32',
+        color: '#fff',
+        padding: '8px 10px',
+        borderRadius: '6px',
+        zIndex: '99999',
+        fontSize: '13px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        opacity: '1',
+        transition: 'opacity 300ms ease'
+      });
+      document.body.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 350);
+      }, 2600);
+    };
+
+    // Listen for the Equalizer signalling that buffer-source mode was enabled (or failed)
+    const onBufferMode = (ev: Event) => {
+      const ce = ev as CustomEvent;
+      const detail = ce?.detail || {};
+      if (detail.success) {
+        showToast('Buffer-source audio enabled');
+        // const origDecoration = title.style.textDecoration;
+        // title.style.textDecoration = 'underline';
+        // title.style.textDecorationColor = '#4caf50';
+        // // subtle glow on play button
+        // const origBox = playButton.style.boxShadow;
+        // playButton.style.boxShadow = '0 0 8px rgba(76,175,80,0.9)';
+        // setTimeout(() => {
+        //   title.style.textDecoration = origDecoration;
+        //   playButton.style.boxShadow = origBox;
+        // }, 3200);
+      } else {
+        // optional: show failure (keeps simple)
+        showToast('Buffer-source fallback failed');
+      }
+    };
+    document.addEventListener('equalizer:buffer-source-mode', onBufferMode, { once: true });
+
     eq = new Equalizer(audio);
 
     // Example: set initial gains

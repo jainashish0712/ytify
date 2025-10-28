@@ -348,8 +348,18 @@ export class Equalizer {
 
       // Reconnect chain (connectChain will pick bufferSourceNode when present)
       this.connectChain(true);
+
+      // notify UI that buffer-source mode is active (simple CustomEvent)
+      try {
+        document.dispatchEvent(new CustomEvent('equalizer:buffer-source-mode', { detail: { success: true } }));
+      } catch (e) {
+        // ignore if dispatching fails
+      }
     } catch (err) {
       console.error("switchToBufferSourceMode failed:", err);
+      try {
+        document.dispatchEvent(new CustomEvent('equalizer:buffer-source-mode', { detail: { success: false, error: String(err) } }));
+      } catch (e) {}
     }
   }
 
