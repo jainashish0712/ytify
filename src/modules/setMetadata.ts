@@ -19,7 +19,7 @@ export async function setMetaData(data: CollectionItem) {
   let music = '';
   let authorText = store.stream.author;
   if (data.author.endsWith(' - Topic')) {
-    music = '&w=720&h=720&fit=cover';
+    music = '&w=2000&h=2000&fit=cover';
     authorText = data.author.slice(0, -8);
   }
 
@@ -28,16 +28,17 @@ export async function setMetaData(data: CollectionItem) {
     artist: authorText,
   };
 
-  const imgX = generateImageUrl(data.id, 'maxres', music);
+  const imgX = generateImageUrl(data.id, '2000', music);
   if (state.loadImage) {
     img.src = imgX
     metadataObj.artwork = [
-      { src: img.src, sizes: '96x96' },
-      { src: img.src, sizes: '128x128' },
-      { src: img.src, sizes: '192x192' },
-      { src: img.src, sizes: '256x256' },
-      { src: img.src, sizes: '384x384' },
-      { src: img.src, sizes: '512x512' },
+      // { src: img.src, sizes: '96x96' },
+      // { src: img.src, sizes: '128x128' },
+      // { src: img.src, sizes: '192x192' },
+      // { src: img.src, sizes: '256x256' },
+      // { src: img.src, sizes: '384x384' },
+      // { src: img.src, sizes: '512x512' },
+      { src: img.src, sizes: '2000x2000' },
     ]
     img.alt = data.title;
   }

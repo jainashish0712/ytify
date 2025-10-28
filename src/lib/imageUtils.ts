@@ -12,9 +12,27 @@ export const generateImageUrl = (
   id: string,
   res: string,
   music: string = ''
-) => 'https://wsrv.nl?url=https://' + (id.startsWith('/') ?
-  `yt3.googleusercontent.com${id}=s720-c-k-c0x00ffffff-no-rj&output=webp&w=${res === 'mq' ? '180' : '360'}` :
-  `i.ytimg.com/vi_webp/${id}/${res}default.webp${music}`);
+) => {
+  // channel images (start with '/')
+  if (id.startsWith('/')) {
+    const base = `yt3.googleusercontent.com${id}=s720-c-k-c0x00ffffff-no-rj&output=webp`;
+    if (res === '2000') {
+      return `https://wsrv.nl?url=https://${base}&w=2000&h=2000&fit=cover&output=webp`;
+    }
+    return `https://wsrv.nl?url=https://${base}&w=${res === 'mq' ? '180' : '360'}`;
+  }
+
+  // stream thumbnails
+  if (res === '2000') {
+    // request the actual maxres source and let wsrv resize it to 2000x2000
+    const base = `i.ytimg.com/vi_webp/${id}/maxresdefault.webp${music}`;
+    return `https://wsrv.nl?url=https://${base}&w=2000&h=2000&fit=cover&output=webp`;
+  }
+
+  // normal behaviour for other sizes
+  const base = `i.ytimg.com/vi_webp/${id}/${res}default.webp${music}`;
+  return `https://wsrv.nl?url=https://${base}`;
+}
 
 
 
@@ -25,7 +43,7 @@ export function getThumbIdFromLink(url: string) {
 
   // for featured playlists
   if (url.startsWith('/') || url.length === 11) return url;
-  // simplify url 
+  // simplify url
   if (url.includes('wsrv.nl'))
     url = url.replace('https://wsrv.nl?url=', '');
 

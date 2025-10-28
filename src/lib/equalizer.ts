@@ -41,7 +41,7 @@ export class Equalizer {
       this.ctx.createBiquadFilter(),
     ];
     this.filters[0].type = 'lowshelf';
-    this.filters[0].frequency.value = 55;
+    this.filters[0].frequency.value = 40;
     this.filters[1].type = 'peaking';
     this.filters[1].frequency.value = 1000;
     this.filters[1].Q.value = 1;

@@ -123,13 +123,13 @@ export default async function player(id: string | null = '') {
     eq = new Equalizer(audio);
 
     // Example: set initial gains
-    eq.setBandGain('bass', 3);    // boost bass
+    eq.setBandGain('bass', 4);    // boost bass
     eq.setBandGain('mid', 6);     // neutral mid
     eq.setBandGain('treble', -4); // neutral treble
     eq.setPitch(0.41); // pitch
 
 
-    const freqs = new Float32Array([60, 1000, 3000]);
+    const freqs = new Float32Array([40, 1000, 3000]);
     const mag = eq.getFrequencyResponse('bass', freqs);
     console.log(mag);
 

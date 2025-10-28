@@ -111,6 +111,14 @@ function themer() {
   const initColor = '127,127,127';
   const custom = state.customColor || (store.player.legacy ? initColor : '');
 
+  // set home background from current list thumbnail or stream thumbnail
+  const thumb = store.list?.thumbnail ||
+                (store.stream?.id ? generateImageUrl(store.stream.id, 'mq') : '');
+  if (thumb)
+    cssVar('--home-bg', `url("${thumb}")`);
+  else
+    cssVar('--home-bg', 'none');
+
   if (state.loadImage && store.stream.id && !custom)
     import('../modules/extractColorFromImage')
       .then(mod => mod.default)

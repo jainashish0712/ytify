@@ -2,7 +2,8 @@
 export default async function(src: string, useOffscreenCanvas: boolean): Promise<number[]> {
 
   const canvas = useOffscreenCanvas ?
-    new OffscreenCanvas(512, 512) :
+    // new OffscreenCanvas(512, 512) :
+    new OffscreenCanvas(2000, 2000) :
     document.createElement('canvas');
   const context = <OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D>canvas.getContext('2d', { alpha: false });
 

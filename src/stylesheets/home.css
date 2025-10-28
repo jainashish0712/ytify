@@ -1,5 +1,5 @@
 #home {
-  height: auto;
+  height: 90vh;
   gap: 5vmin;
   width: 100%;
   padding: 5%;
@@ -108,7 +108,7 @@
     }
 
     #playButton {
-      transform: scale(1.5)
+      transform: scale(2)
     }
   }
 
