@@ -168,9 +168,9 @@ export default async function player(id: string | null = '') {
         eq = new Equalizer(audio);
 
         // --- EQ Configuration (Static settings for the offline render) ---
-        eq.setBandGain('bass', 4);    // boost bass
-        eq.setBandGain('mid', 6);     // neutral mid
-        eq.setBandGain('treble', -4); // neutral treble
+        eq.setBandGain('bass', 0);    // boost bass
+        eq.setBandGain('mid', 0);     // neutral mid
+        eq.setBandGain('treble', 0); // neutral treble
         eq.setPitch(0.41);            // pitch will be baked into the final audio speed
         // --- End Configuration ---
 
