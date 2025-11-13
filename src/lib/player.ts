@@ -245,17 +245,17 @@ export default async function player(id: string | null = '') {
     };
 
     // If on iOS/Safari, wait for user gesture to initialize EQ; otherwise init immediately.
-    if (isIOSorSafari()) {
-        const gestureInit = async () => {
-            await initEQ();
-            document.body.removeEventListener('click', gestureInit);
-            document.body.removeEventListener('touchstart', gestureInit);
-        };
-        document.body.addEventListener('click', gestureInit, { once: true });
-        document.body.addEventListener('touchstart', gestureInit, { once: true });
-    } else {
-        // await initEQ();
-    }
+    // if (isIOSorSafari()) {
+    //     const gestureInit = async () => {
+    //         await initEQ();
+    //         document.body.removeEventListener('click', gestureInit);
+    //         document.body.removeEventListener('touchstart', gestureInit);
+    //     };
+    //     document.body.addEventListener('click', gestureInit, { once: true });
+    //     document.body.addEventListener('touchstart', gestureInit, { once: true });
+    // } else {
+    //     // await initEQ();
+    // }
 
     // Listen for stream data ready event
     const onStreamReady = async () => {
