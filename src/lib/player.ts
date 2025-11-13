@@ -121,7 +121,10 @@ export default async function player(id: string | null = '') {
     };
 
     const initEQ = async () => {
-        if (eq) return;
+        if (eq) {
+            console.log("125", eq);
+            return
+        };
 
         // small helper: show a simple transient toast and brief underline/highlight
         const showToast = (text = 'Info') => {
@@ -242,15 +245,22 @@ export default async function player(id: string | null = '') {
     };
 
     // If on iOS/Safari, wait for user gesture to initialize EQ; otherwise init immediately.
-    if (isIOSorSafari()) {
-        const gestureInit = async () => {
-            await initEQ();
-            document.body.removeEventListener('click', gestureInit);
-            document.body.removeEventListener('touchstart', gestureInit);
-        };
-        document.body.addEventListener('click', gestureInit, { once: true });
-        document.body.addEventListener('touchstart', gestureInit, { once: true });
-    } else {
+    // if (isIOSorSafari()) {
+    //     const gestureInit = async () => {
+    //         await initEQ();
+    //         document.body.removeEventListener('click', gestureInit);
+    //         document.body.removeEventListener('touchstart', gestureInit);
+    //     };
+    //     document.body.addEventListener('click', gestureInit, { once: true });
+    //     document.body.addEventListener('touchstart', gestureInit, { once: true });
+    // } else {
+    //     // await initEQ();
+    // }
+
+    // Listen for stream data ready event
+    const onStreamReady = async () => {
         await initEQ();
-    }
+        document.removeEventListener('stream:data-ready', onStreamReady);
+    };
+    document.addEventListener('stream:data-ready', onStreamReady);
 }
