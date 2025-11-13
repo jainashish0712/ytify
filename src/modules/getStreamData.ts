@@ -14,8 +14,11 @@ export default async function(
     fetch(`${api}/streams/${id}`)
       .then(res => res.json())
       .then(data => {
-        if (state.HLS ? data.hls : data.audioStreams.length)
+        if (state.HLS ? data.hls : data.audioStreams.length) {
+          // Signal that stream data is ready
+          document.dispatchEvent(new CustomEvent('stream:data-ready', { detail: { data } }));
           return data;
+        }
         else throw new Error(data.message);
       });
 
@@ -26,41 +29,46 @@ export default async function(
     .then(data => {
       if (data && 'adaptiveFormats' in data)
         return data;
+
       else throw new Error(data.error);
     })
-    .then((data: Invidious) => ({
-      title: data.title,
-      uploader: data.author,
-      duration: data.lengthSeconds,
-      uploaderUrl: data.authorUrl,
-      liveStream: data.liveNow,
-      subtitles: data.captions.map(c => ({
-        name: c.label,
-        url: c.url
-      })),
-      relatedStreams: data.recommendedVideos.map(v => ({
-        url: '/watch?v=' + v.videoId,
-        title: v.title,
-        uploaderName: v.author,
-        duration: v.lengthSeconds,
-        uploaderUrl: v.authorUrl,
-        type: 'stream'
-      })),
-      videoStreams: data.adaptiveFormats.filter((f) => f.type.startsWith('video')).map(v => ({
-        url: v.url,
-        quality: v.quality,
-        resolution: v.resolution,
-        codec: v.type
-      })),
-      audioStreams: data.adaptiveFormats.filter((f) => f.type.startsWith('audio')).map((v) => ({
-        bitrate: parseInt(v.bitrate),
-        codec: v.encoding || (v.type.includes('webm') ? 'opus' : 'aac'),
-        contentLength: parseInt(v.clen),
-        quality: Math.floor(parseInt(v.bitrate) / 1024) + ' kbps',
-        mimeType: v.type,
-        url: v.url
-      }))
-    }));
+    .then((data: Invidious) => {
+      // Signal that stream data is ready
+      document.dispatchEvent(new CustomEvent('stream:data-ready', { detail: { data } }));
+      return {
+        title: data.title,
+        uploader: data.author,
+        duration: data.lengthSeconds,
+        uploaderUrl: data.authorUrl,
+        liveStream: data.liveNow,
+        subtitles: data.captions.map(c => ({
+          name: c.label,
+          url: c.url
+        })),
+        relatedStreams: data.recommendedVideos.map(v => ({
+          url: '/watch?v=' + v.videoId,
+          title: v.title,
+          uploaderName: v.author,
+          duration: v.lengthSeconds,
+          uploaderUrl: v.authorUrl,
+          type: 'stream'
+        })),
+        videoStreams: data.adaptiveFormats.filter((f) => f.type.startsWith('video')).map(v => ({
+          url: v.url,
+          quality: v.quality,
+          resolution: v.resolution,
+          codec: v.type
+        })),
+        audioStreams: data.adaptiveFormats.filter((f) => f.type.startsWith('audio')).map((v) => ({
+          bitrate: parseInt(v.bitrate),
+          codec: v.encoding || (v.type.includes('webm') ? 'opus' : 'aac'),
+          contentLength: parseInt(v.clen),
+          quality: Math.floor(parseInt(v.bitrate) / 1024) + ' kbps',
+          mimeType: v.type,
+          url: v.url
+        }))
+      };
+    });
 
   const emergency = (e: Error) =>
     (!prefetch && fallback) ?
