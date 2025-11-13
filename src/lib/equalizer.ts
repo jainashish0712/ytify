@@ -116,13 +116,13 @@ export class Equalizer {
     }
 
     /** Helper: Fetches audio from the HTML element's current src and decodes it. */
-    private async prepareAudioBuffer() {
+    private async prepareAudioBuffer(url: string) {
         if (this.cachedAudioBuffer) return;
         await this.unlockAudioContext();
 
-        const resp = await fetch(this.sourceElement.src);
+        const resp = await fetch(url);
         if (!resp.ok) {
-            throw new Error(`Fetch failed with status: ${resp.status} for URL: ${this.sourceElement.src}`);
+            throw new Error(`Fetch failed with status: ${resp.status} for URL: ${url}`);
         }
 
         const arrayBuf = await resp.arrayBuffer();
@@ -179,8 +179,8 @@ export class Equalizer {
     /**
      * Renders the entire audio file through the EQ, Pitch, and Convolver pipeline offline.
      */
-    private async renderAudioOffline(): Promise<AudioBuffer> {
-        await this.prepareAudioBuffer();
+    private async renderAudioOffline(url: string): Promise<AudioBuffer> {
+        await this.prepareAudioBuffer(url);
         if (!this.cachedAudioBuffer || !this.irBuffer) {
             throw new Error("Missing audio buffer or impulse response for offline render.");
         }
@@ -293,30 +293,23 @@ export class Equalizer {
     /**
      * Public entry point: Attempts to render the audio offline, falling back to original source on failure.
      */
-    public async renderAndPlayProcessedAudio(): Promise<void> {
-        // Ensure the audio element has its *original* source set so we can fetch it.
-        // NOTE: This assumes player.ts has set the initial audio.src right before calling initEQ.
-        if (!this.sourceElement.src) {
-             console.warn("Audio element has no source URL.");
+    public async renderAndPlayProcessedAudio(url: string): Promise<void> {
+        if (!url) {
+             console.warn("No source URL provided to renderAndPlayProcessedAudio.");
              return;
         }
 
-        // Check if the source is already the processed URL to prevent re-rendering
-        if (this.processedAudioUrl && this.sourceElement.src === this.processedAudioUrl) {
-            return;
-        }
-
-        // Store the source now, in case HLS/other modules change it later
-        if (this.sourceElement.src !== this.originalAudioSrc) {
-             this.originalAudioSrc = this.sourceElement.src;
-        }
+        // Invalidate previous audio buffers and URLs
+        this.cachedAudioBuffer = null;
+        this.originalAudioSrc = url;
+        this.processedAudioUrl = null;
 
         // NOTE: The UI module should probably show a loading spinner here!
         console.log("Starting offline audio processing...");
 
         try {
             // 1. Render the effect chain (includes pitch and EQ settings)
-            const processedBuffer = await this.renderAudioOffline();
+            const processedBuffer = await this.renderAudioOffline(url);
 
             // 2. Convert to WAV Blob and update the player source
             await this.switchToProcessedAudioMode(processedBuffer);

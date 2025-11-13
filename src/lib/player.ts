@@ -7,6 +7,7 @@ import getStreamData from "../modules/getStreamData";
 import { Equalizer } from './equalizer'; // Assuming Equalizer.ts is in the same directory
 
 let eq: Equalizer | undefined;
+let currentStreamId: string | null = null;
 
 export default async function player(id: string | null = '') {
 
@@ -22,6 +23,12 @@ export default async function player(id: string | null = '') {
             .then(mod => mod.default(dialog));
         return;
     }
+
+    // Prevent re-triggering if the same track is already being processed or played
+    if (id === currentStreamId) {
+        return;
+    }
+    currentStreamId = id;
 
     playButton.classList.replace(playButton.className, 'ri-loader-3-line');
 
@@ -54,27 +61,6 @@ export default async function player(id: string | null = '') {
 
     // Ensure crossorigin set BEFORE any src assignment (required for CORS/Convolver)
     try { audio.crossOrigin = 'anonymous'; } catch (e) { /* ignore */ }
-
-    // --- Audio Source Assignment ---
-    if (store.player.legacy) {
-        audio.src = data.hls;
-        audio.load();
-    }
-    else {
-        const { hls } = store.player;
-        if (state.HLS) {
-            const hlsUrl = hls.manifests.shift();
-            if (hlsUrl) hls.src(hlsUrl);
-        }
-        else import('../modules/setAudioStreams')
-            .then(mod => mod.default(
-                data.audioStreams
-                    .sort((a: { bitrate: string }, b: { bitrate: string }) => (parseInt(a.bitrate) - parseInt(b.bitrate))
-                    ),
-                data.livestream
-            ));
-    }
-    // --- End Audio Source Assignment ---
 
 
     params.set('s', id);
@@ -121,10 +107,7 @@ export default async function player(id: string | null = '') {
     };
 
     const initEQ = async () => {
-        if (eq) {
-            console.log("125", eq);
-            return
-        };
+        if (eq) return;
 
         // small helper: show a simple transient toast and brief underline/highlight
         const showToast = (text = 'Info') => {
@@ -196,8 +179,19 @@ export default async function player(id: string | null = '') {
         // --- Core EQ Initialisation Logic: Load IR then Render Offline ---
         const executeProcessing = async () => {
             await loadIR();
+            // Get the preferred stream URL but do not set it on the audio element yet
+            const stream = await import('../modules/setAudioStreams').then(mod => mod.getStreamUrl(
+                data.audioStreams
+                    .sort((a: { bitrate: string }, b: { bitrate: string }) => (parseInt(a.bitrate) - parseInt(b.bitrate))
+                    ),
+                data.livestream
+            ));
+
+            if (!stream) {
+                throw new Error("Could not get a stream URL to process.");
+            }
             // This initiates the entire offline render process (Fetch, Decode, Process, Encode, Set Source)
-            await eq!.renderAndPlayProcessedAudio();
+            await eq!.renderAndPlayProcessedAudio(stream.url);
         };
         // -----------------------------------------------------------------
 
@@ -244,23 +238,7 @@ export default async function player(id: string | null = '') {
         }
     };
 
-    // If on iOS/Safari, wait for user gesture to initialize EQ; otherwise init immediately.
-    // if (isIOSorSafari()) {
-    //     const gestureInit = async () => {
-    //         await initEQ();
-    //         document.body.removeEventListener('click', gestureInit);
-    //         document.body.removeEventListener('touchstart', gestureInit);
-    //     };
-    //     document.body.addEventListener('click', gestureInit, { once: true });
-    //     document.body.addEventListener('touchstart', gestureInit, { once: true });
-    // } else {
-    //     // await initEQ();
-    // }
-
-    // Listen for stream data ready event
-    const onStreamReady = async () => {
-        await initEQ();
-        document.removeEventListener('stream:data-ready', onStreamReady);
-    };
-    document.addEventListener('stream:data-ready', onStreamReady);
+    // Initialize the equalizer immediately after getting stream data.
+    // The audio source will be set internally by the equalizer.
+    await initEQ();
 }

@@ -1,7 +1,15 @@
 import { audio, playButton, qualityView, title } from "../lib/dom";
 
-import { handleXtags, preferredStream, proxyHandler } from "../lib/utils";
+import {
+  handleXtags,
+  preferredStream as getPreferredStream,
+  proxyHandler,
+} from "../lib/utils";
 import { i18n } from "../scripts/i18n";
+
+export async function getStreamUrl(audioStreams: AudioStream[], isLive = false) {
+    return await getPreferredStream(handleXtags(audioStreams));
+}
 
 export default async function(audioStreams: AudioStream[],
   isLive = false,
@@ -24,7 +32,7 @@ export default async function(audioStreams: AudioStream[],
   }
 
 
-  const stream = await preferredStream(handleXtags(audioStreams));
+  const stream = await getStreamUrl(audioStreams, isLive);
   qualityView.textContent = stream.quality + ' ' + stream.codec;
 receiver.crossOrigin = "anonymous";
   receiver.src = proxyHandler(stream.url, prefetch);
