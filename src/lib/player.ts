@@ -121,7 +121,10 @@ export default async function player(id: string | null = '') {
     };
 
     const initEQ = async () => {
-        if (eq) return;
+        if (eq) {
+            console.log("125", eq);
+            return
+        };
 
         // small helper: show a simple transient toast and brief underline/highlight
         const showToast = (text = 'Info') => {
@@ -251,6 +254,13 @@ export default async function player(id: string | null = '') {
         document.body.addEventListener('click', gestureInit, { once: true });
         document.body.addEventListener('touchstart', gestureInit, { once: true });
     } else {
-        await initEQ();
+        // await initEQ();
     }
+
+    // Listen for stream data ready event
+    const onStreamReady = async () => {
+        await initEQ();
+        document.removeEventListener('stream:data-ready', onStreamReady);
+    };
+    document.addEventListener('stream:data-ready', onStreamReady);
 }
