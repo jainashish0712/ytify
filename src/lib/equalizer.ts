@@ -77,6 +77,7 @@ export class Equalizer {
     public requiresUserGesture(): boolean { return this.isIOSorSafari(); }
     public isContextRunning(): boolean { return this.ctx.state === 'running'; }
     public async unlockAudioContext(): Promise<void> { /* ... logic as before ... */
+        // if (this.ctx.state) return;
         if (this.ctx.state === 'running') return;
         try {
             await this.ctx.resume();
@@ -294,6 +295,7 @@ export class Equalizer {
      * Public entry point: Attempts to render the audio offline, falling back to original source on failure.
      */
     public async renderAndPlayProcessedAudio(): Promise<void> {
+        console.log("298",this.sourceElement.src,this.originalAudioSrc,this.processedAudioUrl);
         // Ensure the audio element has its *original* source set so we can fetch it.
         // NOTE: This assumes player.ts has set the initial audio.src right before calling initEQ.
         if (!this.sourceElement.src) {
