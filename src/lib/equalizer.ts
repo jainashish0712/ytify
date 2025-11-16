@@ -77,12 +77,15 @@ export class Equalizer {
     public requiresUserGesture(): boolean { return this.isIOSorSafari(); }
     public isContextRunning(): boolean { return this.ctx.state === 'running'; }
     public async unlockAudioContext(): Promise<void> { /* ... logic as before ... */
+        // if (this.ctx.state) return;
         if (this.ctx.state === 'running') return;
         try {
             await this.ctx.resume();
             await this.primeSilentBuffer();
             return;
-        } catch (e) { /* ignore */ }
+        } catch (e) {
+            console.log("86",);
+        }
 
         if (this.ctx.state === 'suspended') {
             await new Promise<void>((resolve) => {
@@ -287,7 +290,7 @@ export class Equalizer {
 
         try {
             document.dispatchEvent(new CustomEvent('equalizer:processed-ready', { detail: { success: true } }));
-        } catch (e) {}
+        } catch (e) { }
     }
 
     /**
@@ -297,8 +300,8 @@ export class Equalizer {
         // Ensure the audio element has its *original* source set so we can fetch it.
         // NOTE: This assumes player.ts has set the initial audio.src right before calling initEQ.
         if (!this.sourceElement.src) {
-             console.warn("Audio element has no source URL.");
-             return;
+            console.warn("Audio element has no source URL.");
+            return;
         }
 
         // Check if the source is already the processed URL to prevent re-rendering
@@ -308,7 +311,7 @@ export class Equalizer {
 
         // Store the source now, in case HLS/other modules change it later
         if (this.sourceElement.src !== this.originalAudioSrc) {
-             this.originalAudioSrc = this.sourceElement.src;
+            this.originalAudioSrc = this.sourceElement.src;
         }
 
         // NOTE: The UI module should probably show a loading spinner here!
@@ -333,7 +336,7 @@ export class Equalizer {
 
             try {
                 document.dispatchEvent(new CustomEvent('equalizer:processed-ready', { detail: { success: false, error: String(error) } }));
-            } catch (e) {}
+            } catch (e) { }
         }
     }
 

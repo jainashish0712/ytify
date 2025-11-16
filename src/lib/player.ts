@@ -10,7 +10,132 @@ let eq: Equalizer | undefined;
 
 export default async function player(id: string | null = '') {
 
+    const initEQ = async () => {
+        if (eq) return;
+
+        // small helper: show a simple transient toast and brief underline/highlight
+        const showToast = (text = 'Info') => {
+            const id = 'ytify-mini-toast';
+            if (document.getElementById(id)) return;
+            const el = document.createElement('div');
+            el.id = id;
+            el.textContent = '✔ ' + text;
+            Object.assign(el.style, {
+                position: 'fixed',
+                right: '12px',
+                bottom: '12px',
+                background: '#2e7d32',
+                color: '#fff',
+                padding: '8px 10px',
+                borderRadius: '6px',
+                zIndex: '99999',
+                fontSize: '13px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                opacity: '1',
+                transition: 'opacity 300ms ease'
+            });
+            document.body.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                setTimeout(() => el.remove(), 350);
+            }, 2600);
+        };
+
+        // Listen for the Equalizer signalling that processing is ready (optional UI feedback)
+        const onProcessedReady = (ev: Event) => {
+            const ce = ev as CustomEvent;
+            const detail = ce?.detail || {};
+            if (detail.success) {
+                showToast('Audio features baked-in (background play enabled)');
+            } else {
+                showToast('Audio processing failed, using original stream.');
+            }
+        };
+        // This event signals completion of the offline render, whether successful or failed (fallback)
+        document.addEventListener('equalizer:processed-ready', onProcessedReady, { once: true });
+
+
+        eq = new Equalizer(audio);
+
+        // --- EQ Configuration (Static settings for the offline render) ---
+        eq.setBandGain('bass', 4);    // boost bass
+        eq.setBandGain('mid', 6);     // neutral mid
+        eq.setBandGain('treble', -4); // neutral treble
+        eq.setPitch(0.41);            // pitch will be baked into the final audio speed
+        // --- End Configuration ---
+
+
+        const freqs = new Float32Array([40, 1000, 3000]);
+        const mag = eq.getFrequencyResponse('bass', freqs);
+        console.log(mag);
+
+        // Helper to load IR safely
+        const loadIR = async () => {
+            try {
+                // The IR must be successfully loaded for the offline render to proceed.
+                await eq!.loadImpulseResponse(encodeURI('/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100.irs'));
+            } catch (e) {
+                console.warn("Failed loading IR:", e);
+                throw e; // Re-throw to trigger the fallback logic
+            }
+        };
+
+        // --- Core EQ Initialisation Logic: Load IR then Render Offline ---
+        const executeProcessing = async () => {
+            await loadIR();
+            // This initiates the entire offline render process (Fetch, Decode, Process, Encode, Set Source)
+            await eq!.renderAndPlayProcessedAudio();
+        };
+        // -----------------------------------------------------------------
+
+
+        // If context is not running, ensure unlock is attempted (constructor may have registered gesture listeners)
+        if (eq.requiresUserGesture() && !eq.isContextRunning()) {
+            // create a small one-time prompt to guide the user (optional UX)
+            const unlockEl = document.createElement('div');
+            unlockEl.id = 'audioUnlock';
+            unlockEl.textContent = 'Tap to enable audio features (Loading)';
+            unlockEl.style.position = 'fixed';
+            unlockEl.style.left = '10px';
+            unlockEl.style.bottom = '10px';
+            unlockEl.style.padding = '10px 12px';
+            unlockEl.style.background = 'rgba(0,0,0,0.85)';
+            unlockEl.style.color = '#fff';
+            unlockEl.style.borderRadius = '6px';
+            unlockEl.style.zIndex = '9999';
+            unlockEl.style.cursor = 'pointer';
+            document.body.appendChild(unlockEl);
+
+            const handler = async () => {
+                try {
+                    await eq!.unlockAudioContext();
+                    unlockEl.textContent = 'Processing Audio...';
+                    await executeProcessing();
+                } catch (e) {
+                    // Failures here are logged by the EQ class and trigger a fallback
+                    console.warn("Processing failed after unlock:", e);
+                } finally {
+                    unlockEl.removeEventListener('click', handler);
+                    unlockEl.remove();
+                }
+            };
+            unlockEl.addEventListener('click', handler, { once: true });
+        } else {
+            // normal path: load IR and process immediately
+            try {
+                await executeProcessing();
+            } catch (e) {
+                console.error("Initial audio processing failed:", e);
+                // Fallback is handled internally by renderAndPlayProcessedAudio
+            }
+        }
+    };
+
+        await initEQ();
+
     if (!id) return;
+
+
 
     if (state.watchMode) {
         store.actionsMenu.id = id;
@@ -120,147 +245,18 @@ export default async function player(id: string | null = '') {
         return isIOS || isSafari;
     };
 
-    const initEQ = async () => {
-        if (eq) {
-            console.log("125", eq);
-            return
-        };
 
-        // small helper: show a simple transient toast and brief underline/highlight
-        const showToast = (text = 'Info') => {
-            const id = 'ytify-mini-toast';
-            if (document.getElementById(id)) return;
-            const el = document.createElement('div');
-            el.id = id;
-            el.textContent = '✔ ' + text;
-            Object.assign(el.style, {
-                position: 'fixed',
-                right: '12px',
-                bottom: '12px',
-                background: '#2e7d32',
-                color: '#fff',
-                padding: '8px 10px',
-                borderRadius: '6px',
-                zIndex: '99999',
-                fontSize: '13px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                opacity: '1',
-                transition: 'opacity 300ms ease'
-            });
-            document.body.appendChild(el);
-            setTimeout(() => {
-                el.style.opacity = '0';
-                setTimeout(() => el.remove(), 350);
-            }, 2600);
-        };
-
-        // Listen for the Equalizer signalling that processing is ready (optional UI feedback)
-        const onProcessedReady = (ev: Event) => {
-            const ce = ev as CustomEvent;
-            const detail = ce?.detail || {};
-            if (detail.success) {
-                showToast('Audio features baked-in (background play enabled)');
-            } else {
-                showToast('Audio processing failed, using original stream.');
-            }
-        };
-        // This event signals completion of the offline render, whether successful or failed (fallback)
-        document.addEventListener('equalizer:processed-ready', onProcessedReady, { once: true });
-
-
-        eq = new Equalizer(audio);
-
-        // --- EQ Configuration (Static settings for the offline render) ---
-        eq.setBandGain('bass', 0);    // boost bass
-        eq.setBandGain('mid', 0);     // neutral mid
-        eq.setBandGain('treble', 0); // neutral treble
-        eq.setPitch(0.41);            // pitch will be baked into the final audio speed
-        // --- End Configuration ---
-
-
-        const freqs = new Float32Array([40, 1000, 3000]);
-        const mag = eq.getFrequencyResponse('bass', freqs);
-        console.log(mag);
-
-        // Helper to load IR safely
-        const loadIR = async () => {
-            try {
-                // The IR must be successfully loaded for the offline render to proceed.
-                await eq!.loadImpulseResponse(encodeURI('/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100.irs'));
-            } catch (e) {
-                console.warn("Failed loading IR:", e);
-                throw e; // Re-throw to trigger the fallback logic
-            }
-        };
-
-        // --- Core EQ Initialisation Logic: Load IR then Render Offline ---
-        const executeProcessing = async () => {
-            await loadIR();
-            // This initiates the entire offline render process (Fetch, Decode, Process, Encode, Set Source)
-            await eq!.renderAndPlayProcessedAudio();
-        };
-        // -----------------------------------------------------------------
-
-
-        // If context is not running, ensure unlock is attempted (constructor may have registered gesture listeners)
-        if (eq.requiresUserGesture() && !eq.isContextRunning()) {
-            // create a small one-time prompt to guide the user (optional UX)
-            const unlockEl = document.createElement('div');
-            unlockEl.id = 'audioUnlock';
-            unlockEl.textContent = 'Tap to enable audio features (Loading)';
-            unlockEl.style.position = 'fixed';
-            unlockEl.style.left = '10px';
-            unlockEl.style.bottom = '10px';
-            unlockEl.style.padding = '10px 12px';
-            unlockEl.style.background = 'rgba(0,0,0,0.85)';
-            unlockEl.style.color = '#fff';
-            unlockEl.style.borderRadius = '6px';
-            unlockEl.style.zIndex = '9999';
-            unlockEl.style.cursor = 'pointer';
-            document.body.appendChild(unlockEl);
-
-            const handler = async () => {
-                try {
-                    await eq!.unlockAudioContext();
-                    unlockEl.textContent = 'Processing Audio...';
-                    await executeProcessing();
-                } catch (e) {
-                    // Failures here are logged by the EQ class and trigger a fallback
-                    console.warn("Processing failed after unlock:", e);
-                } finally {
-                    unlockEl.removeEventListener('click', handler);
-                    unlockEl.remove();
-                }
-            };
-            unlockEl.addEventListener('click', handler, { once: true });
-        } else {
-            // normal path: load IR and process immediately
-            try {
-                await executeProcessing();
-            } catch (e) {
-                console.error("Initial audio processing failed:", e);
-                // Fallback is handled internally by renderAndPlayProcessedAudio
-            }
-        }
-    };
 
     // If on iOS/Safari, wait for user gesture to initialize EQ; otherwise init immediately.
-    // if (isIOSorSafari()) {
-    //     const gestureInit = async () => {
-    //         await initEQ();
-    //         document.body.removeEventListener('click', gestureInit);
-    //         document.body.removeEventListener('touchstart', gestureInit);
-    //     };
-    //     document.body.addEventListener('click', gestureInit, { once: true });
-    //     document.body.addEventListener('touchstart', gestureInit, { once: true });
-    // } else {
-    //     // await initEQ();
-    // }
-
-    // Listen for stream data ready event
-    const onStreamReady = async () => {
+    if (isIOSorSafari()) {
+        const gestureInit = async () => {
+            await initEQ();
+            document.body.removeEventListener('click', gestureInit);
+            document.body.removeEventListener('touchstart', gestureInit);
+        };
+        document.body.addEventListener('click', gestureInit, { once: true });
+        document.body.addEventListener('touchstart', gestureInit, { once: true });
+    } else {
         await initEQ();
-        document.removeEventListener('stream:data-ready', onStreamReady);
-    };
-    document.addEventListener('stream:data-ready', onStreamReady);
+    }
 }
