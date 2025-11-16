@@ -9,6 +9,47 @@ import { Equalizer } from './equalizer';
 let eq: Equalizer | undefined;
 
 export default async function player(id: string | null = '') {
+  const initEQ = async () => {
+    if (eq) return;
+    eq = new Equalizer(audio);
+
+    // Set initial gains
+    eq.setBandGain('bass', 3);
+    eq.setBandGain('mid', 0);
+    eq.setBandGain('treble', 0);
+
+    const loadIR = async () => {
+      try {
+        await eq!.loadImpulseResponse(encodeURI('/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100.irs'));
+      } catch (e) {
+        console.warn("Failed loading IR:", e);
+      }
+    };
+
+    if (eq.requiresUserGesture() && !eq.isContextRunning()) {
+      const unlockEl = document.createElement('div');
+      unlockEl.id = 'audioUnlock';
+      unlockEl.textContent = 'Tap to enable audio features';
+      unlockEl.style.cssText = 'position:fixed;left:10px;bottom:10px;padding:10px 12px;background:rgba(0,0,0,0.85);color:#fff;border-radius:6px;z-index:9999;cursor:pointer';
+      document.body.appendChild(unlockEl);
+
+      const handler = async () => {
+        try {
+          await eq!.unlockAudioContext();
+          await loadIR();
+          eq!.enableConvolver(true);
+        } catch (e) {
+          console.warn("Unlock failed:", e);
+        } finally {
+          unlockEl.remove();
+        }
+      };
+      unlockEl.addEventListener('click', handler, { once: true });
+    } else {
+      await loadIR();
+      eq!.enableConvolver(true);
+    }
+  };
 
   if (!id) return;
 
@@ -36,8 +77,11 @@ export default async function player(id: string | null = '') {
 
   const data = await getStreamData(id);
 
-  if (data && 'audioStreams' in data)
+  if (data && 'audioStreams' in data){
+
     store.player.data = data;
+    await initEQ();
+  }
   else {
     playButton.classList.replace(playButton.className, 'ri-stop-circle-fill');
     title.textContent = data.message || data.error || 'Fetching Data Failed';
@@ -118,67 +162,7 @@ export default async function player(id: string | null = '') {
     return isIOS || isSafari;
   };
 
-  const initEQ = async () => {
-    if (eq) return;
-    eq = new Equalizer(audio);
 
-    // Example: set initial gains
-    eq.setBandGain('bass', 3);    // boost bass
-    eq.setBandGain('mid', 6);     // neutral mid
-    eq.setBandGain('treble', -4); // neutral treble
-
-    const freqs = new Float32Array([60, 1000, 3000]);
-    const mag = eq.getFrequencyResponse('bass', freqs);
-    console.log(mag);
-
-    // Helper to load IR safely
-    const loadIR = async () => {
-      try {
-        await eq!.loadImpulseResponse(encodeURI('/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100.irs'));
-      } catch (e) {
-        console.warn("Failed loading IR:", e);
-      }
-    };
-
-    // If context is not running, ensure unlock is attempted (constructor may have registered gesture listeners)
-    if (eq.requiresUserGesture() && !eq.isContextRunning()) {
-      // create a small one-time prompt to guide the user (optional UX)
-      const unlockEl = document.createElement('div');
-      unlockEl.id = 'audioUnlock';
-      unlockEl.textContent = 'Tap to enable audio features';
-      unlockEl.style.position = 'fixed';
-      unlockEl.style.left = '10px';
-      unlockEl.style.bottom = '10px';
-      unlockEl.style.padding = '10px 12px';
-      unlockEl.style.background = 'rgba(0,0,0,0.85)';
-      unlockEl.style.color = '#fff';
-      unlockEl.style.borderRadius = '6px';
-      unlockEl.style.zIndex = '9999';
-      unlockEl.style.cursor = 'pointer';
-      document.body.appendChild(unlockEl);
-
-      const handler = async () => {
-        try {
-          await eq!.unlockAudioContext();
-          await loadIR();
-        } catch (e) {
-          console.warn("unlockAudioContext failed:", e);
-        } finally {
-          unlockEl.removeEventListener('click', handler);
-          unlockEl.remove();
-        }
-      };
-      unlockEl.addEventListener('click', handler, { once: true });
-    } else {
-      // normal path: load IR immediately
-      await loadIR();
-    }
-    eq!.enableConvolver(true);
-
-    // const toggle = document.getElementById('convolverToggle') as HTMLInputElement;
-    // if (toggle) toggle.addEventListener('change', () => { eq!.enableConvolver(toggle.checked); });
-    // if (toggle) toggle.addEventListener('change', () => { eq!.enableConvolver(toggle.checked); });
-  };
 
   // If on iOS/Safari, wait for user gesture to initialize EQ; otherwise init immediately.
   if (isIOSorSafari()) {
