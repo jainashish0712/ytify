@@ -161,6 +161,7 @@ audio.oncanplaythrough = async function() {
   const data = await getStreamData(nextItem, true);
   const sandbox = new Audio();
   sandbox.onerror = () => audioErrorHandler(sandbox);
+  console.log("164",data);
   if ('audioStreams' in data)
     import('../modules/setAudioStreams')
       .then(mod => mod.default(

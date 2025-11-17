@@ -1,3 +1,5 @@
+import { store } from "./store";
+
 // --- Equalizer.ts ---
 export class Equalizer {
     private ctx: AudioContext;
@@ -11,13 +13,18 @@ export class Equalizer {
     private irBuffer: AudioBuffer | null = null;
     private cachedAudioBuffer: AudioBuffer | null = null;
     private originalAudioSrc: string = ''; // New: Stores the initial audio URL
-    private processedAudioUrl: string | null = null; // New: Stores the Object URL of the processed WAV
+    public processedAudioUrl: string | null = null; // New: Stores the Object URL of the processed WAV
 
     private pitchSemitones: number = 0.41; // Using your configured default
 
     constructor(audio: HTMLAudioElement) {
+        const { index, invidious } = store.api;
+
+        console.log("23",audio);
+
         this.sourceElement = audio;
         this.originalAudioSrc = audio.src; // Capture the initial source URL
+        console.log("21",this.sourceElement , this.originalAudioSrc);
 
         try {
             this.sourceElement.crossOrigin = 'anonymous';
@@ -77,8 +84,10 @@ export class Equalizer {
     public requiresUserGesture(): boolean { return this.isIOSorSafari(); }
     public isContextRunning(): boolean { return this.ctx.state === 'running'; }
     public async unlockAudioContext(): Promise<void> { /* ... logic as before ... */
-        // if (this.ctx.state) return;
-        if (this.ctx.state === 'running') return;
+        if (this.ctx.state) return;
+        console.log("21",this);
+
+        // if (this.ctx.state === 'running') return;
         try {
             await this.ctx.resume();
             await this.primeSilentBuffer();
@@ -299,6 +308,7 @@ export class Equalizer {
     public async renderAndPlayProcessedAudio(): Promise<void> {
         // Ensure the audio element has its *original* source set so we can fetch it.
         // NOTE: This assumes player.ts has set the initial audio.src right before calling initEQ.
+        console.log("311",this.sourceElement,this);
         if (!this.sourceElement.src) {
             console.warn("Audio element has no source URL.");
             return;

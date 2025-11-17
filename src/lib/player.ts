@@ -54,7 +54,7 @@ export default async function player(id: string | null = '') {
         // This event signals completion of the offline render, whether successful or failed (fallback)
         document.addEventListener('equalizer:processed-ready', onProcessedReady, { once: true });
 
-
+console.log("57",audio);
         eq = new Equalizer(audio);
 
         // --- EQ Configuration (Static settings for the offline render) ---
@@ -182,7 +182,8 @@ export default async function player(id: string | null = '') {
 
     // --- Audio Source Assignment ---
     if (store.player.legacy) {
-        audio.src = data.hls;
+        audio.src = "";
+        console.log("186",data.hls);
         audio.load();
     }
     else {
@@ -191,13 +192,13 @@ export default async function player(id: string | null = '') {
             const hlsUrl = hls.manifests.shift();
             if (hlsUrl) hls.src(hlsUrl);
         }
-        else import('../modules/setAudioStreams')
+        else {import('../modules/setAudioStreams')
             .then(mod => mod.default(
                 data.audioStreams
                     .sort((a: { bitrate: string }, b: { bitrate: string }) => (parseInt(a.bitrate) - parseInt(b.bitrate))
                     ),
                 data.livestream
-            ));
+            ));}
     }
     // --- End Audio Source Assignment ---
 

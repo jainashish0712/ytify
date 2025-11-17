@@ -16,6 +16,7 @@ export default async function(dialog: HTMLDialogElement) {
   };
   let video!: HTMLVideoElement;
   const audio = new Audio();
+  console.log("19",audio);
   const savedQ = state.watchMode;
 
   const supportsAv1 = await navigator.mediaCapabilities

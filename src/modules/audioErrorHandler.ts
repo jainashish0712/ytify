@@ -23,12 +23,13 @@ export default function(audio: HTMLAudioElement) {
     return;
   }
 
+  console.log("28",invidious);
   if (index < invidious.length) {
     const proxy = invidious[index];
     if (audio.parentNode)
       title.textContent = `Switching proxy to ${proxy.slice(8)}`;
       audio.crossOrigin = "anonymous"; // <-- Add this line
-    audio.src = audio.src.replace(origin, proxy);
+    audio.src = ""; //we need this audio.src here in setAudioStreams.ts
     store.api.index++;
   }
   else {
