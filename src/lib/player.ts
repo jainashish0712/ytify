@@ -8,6 +8,33 @@ import { Equalizer } from './equalizer'; // Assuming Equalizer.ts is in the same
 
 let eq: Equalizer | undefined;
 
+document.addEventListener('audio:processed-success', () => {
+    const id = 'ytify-mini-toast';
+    if (document.getElementById(id)) return;
+    const el = document.createElement('div');
+    el.id = id;
+    el.textContent = '✅ Processed audio assigned (Equalizer)';
+    Object.assign(el.style, {
+        position: 'fixed',
+        right: '12px',
+        bottom: '12px',
+        background: '#2e7d32',
+        color: '#fff',
+        padding: '8px 10px',
+        borderRadius: '6px',
+        zIndex: '99999',
+        fontSize: '13px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+        opacity: '1',
+        transition: 'opacity 300ms ease'
+    });
+    document.body.appendChild(el);
+    setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 350);
+    }, 2600);
+});
+
 export default async function player(id: string | null = '') {
 
     const initEQ = async () => {
@@ -46,7 +73,7 @@ export default async function player(id: string | null = '') {
             const ce = ev as CustomEvent;
             const detail = ce?.detail || {};
             if (detail.success) {
-                showToast('Audio features baked-in (background play enabled)');
+                showToast('');
             } else {
                 showToast('Audio processing failed, using original stream.');
             }
@@ -90,45 +117,45 @@ console.log("57",audio);
 
 
         // If context is not running, ensure unlock is attempted (constructor may have registered gesture listeners)
-        if (eq.requiresUserGesture() && !eq.isContextRunning()) {
-            // create a small one-time prompt to guide the user (optional UX)
-            const unlockEl = document.createElement('div');
-            unlockEl.id = 'audioUnlock';
-            unlockEl.textContent = 'Tap to enable audio features (Loading)';
-            unlockEl.style.position = 'fixed';
-            unlockEl.style.left = '10px';
-            unlockEl.style.bottom = '10px';
-            unlockEl.style.padding = '10px 12px';
-            unlockEl.style.background = 'rgba(0,0,0,0.85)';
-            unlockEl.style.color = '#fff';
-            unlockEl.style.borderRadius = '6px';
-            unlockEl.style.zIndex = '9999';
-            unlockEl.style.cursor = 'pointer';
-            document.body.appendChild(unlockEl);
+        // if (eq.requiresUserGesture() && !eq.isContextRunning()) {
+        //     // create a small one-time prompt to guide the user (optional UX)
+        //     const unlockEl = document.createElement('div');
+        //     unlockEl.id = 'audioUnlock';
+        //     unlockEl.textContent = 'Tap to enable audio features (Loading)';
+        //     unlockEl.style.position = 'fixed';
+        //     unlockEl.style.left = '10px';
+        //     unlockEl.style.bottom = '10px';
+        //     unlockEl.style.padding = '10px 12px';
+        //     unlockEl.style.background = 'rgba(0,0,0,0.85)';
+        //     unlockEl.style.color = '#fff';
+        //     unlockEl.style.borderRadius = '6px';
+        //     unlockEl.style.zIndex = '9999';
+        //     unlockEl.style.cursor = 'pointer';
+        //     document.body.appendChild(unlockEl);
 
-            const handler = async () => {
-                try {
-                    await eq!.unlockAudioContext();
-                    unlockEl.textContent = 'Processing Audio...';
-                    await executeProcessing();
-                } catch (e) {
-                    // Failures here are logged by the EQ class and trigger a fallback
-                    console.warn("Processing failed after unlock:", e);
-                } finally {
-                    unlockEl.removeEventListener('click', handler);
-                    unlockEl.remove();
-                }
-            };
-            unlockEl.addEventListener('click', handler, { once: true });
-        } else {
-            // normal path: load IR and process immediately
-            try {
-                await executeProcessing();
-            } catch (e) {
-                console.error("Initial audio processing failed:", e);
-                // Fallback is handled internally by renderAndPlayProcessedAudio
-            }
-        }
+        //     const handler = async () => {
+        //         try {
+        //             await eq!.unlockAudioContext();
+        //             unlockEl.textContent = 'Processing Audio...';
+        //             await executeProcessing();
+        //         } catch (e) {
+        //             // Failures here are logged by the EQ class and trigger a fallback
+        //             console.warn("Processing failed after unlock:", e);
+        //         } finally {
+        //             unlockEl.removeEventListener('click', handler);
+        //             unlockEl.remove();
+        //         }
+        //     };
+        //     unlockEl.addEventListener('click', handler, { once: true });
+        // } else {
+        //     // normal path: load IR and process immediately
+        //     try {
+        //         await executeProcessing();
+        //     } catch (e) {
+        //         console.error("Initial audio processing failed:", e);
+        //         // Fallback is handled internally by renderAndPlayProcessedAudio
+        //     }
+        // }
     };
 
         await initEQ();
@@ -161,8 +188,11 @@ console.log("57",audio);
 
     const data = await getStreamData(id);
 
-    if (data && 'audioStreams' in data)
+
+    if (data && 'audioStreams' in data) {
+        console.log("166",data);
         store.player.data = data;
+    }
     else {
         playButton.classList.replace(playButton.className, 'ri-stop-circle-fill');
         title.textContent = data.message || data.error || 'Fetching Data Failed';
@@ -182,7 +212,7 @@ console.log("57",audio);
 
     // --- Audio Source Assignment ---
     if (store.player.legacy) {
-        audio.src = "";
+        audio.src = data.hls;
         console.log("186",data.hls);
         audio.load();
     }
@@ -251,13 +281,13 @@ console.log("57",audio);
     // If on iOS/Safari, wait for user gesture to initialize EQ; otherwise init immediately.
     if (isIOSorSafari()) {
         const gestureInit = async () => {
-            await initEQ();
+            // await initEQ();
             document.body.removeEventListener('click', gestureInit);
             document.body.removeEventListener('touchstart', gestureInit);
         };
         document.body.addEventListener('click', gestureInit, { once: true });
         document.body.addEventListener('touchstart', gestureInit, { once: true });
     } else {
-        await initEQ();
+        // await initEQ();
     }
 }

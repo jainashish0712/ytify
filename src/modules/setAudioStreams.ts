@@ -185,10 +185,11 @@ export default async function(audioStreams: AudioStream[],
   isLive = false,
   receiver: HTMLAudioElement = audio
 ) {
+  console.log("188",audio);
 
   const receiverToSendForProcess = receiver
 
-  const prefetch = !receiverToSendForProcess.parentNode;
+  const prefetch = !receiver.parentNode;
   if (!prefetch)
     title.textContent = i18n('player_audiostreams_setup');
 
@@ -204,12 +205,14 @@ export default async function(audioStreams: AudioStream[],
 
   const stream = await preferredStream(handleXtags(audioStreams));
   qualityView.textContent = stream.quality + ' ' + stream.codec;
+  receiver.crossOrigin = "anonymous";
   receiverToSendForProcess.crossOrigin = "anonymous";
 
   // 🔴 Apply proxyHandler to get the actual proxied URL
   const rawUrl = proxyHandler(stream.url, prefetch);
 
   // 🔴 STORE the original proxied URL for error handling
+  receiver.dataset.originalStreamUrl = rawUrl;
   receiverToSendForProcess.dataset.originalStreamUrl = rawUrl;
 
   console.log(`${LOG_PREFIX} Proxied URL: ${rawUrl.substring(0, 100)}...`);
@@ -221,11 +224,11 @@ export default async function(audioStreams: AudioStream[],
       console.log(`${LOG_PREFIX} Attempting client-side processing...`);
 
       // 1. Check if progressive audio
-      const isProgressive = await isProgressiveAudio(rawUrl);
-      if (!isProgressive) {
-        receiverToSendForProcess.src = rawUrl;
-        return;
-      }
+      // const isProgressive = await isProgressiveAudio(rawUrl);
+      // if (!isProgressive) {
+      //   receiver.src = rawUrl;
+      //   return;
+      // }
       // --- Use Equalizer for processing ---
       receiverToSendForProcess.src = rawUrl;
       const eq = new Equalizer(receiverToSendForProcess);
@@ -239,6 +242,9 @@ export default async function(audioStreams: AudioStream[],
       if (eq.processedAudioUrl) {
         receiver.src = eq.processedAudioUrl;
         console.log(`${LOG_PREFIX} ✅ Processed audio assigned (Equalizer)`, eq.processedAudioUrl);
+
+        // Dispatch event for toast
+        document.dispatchEvent(new CustomEvent('audio:processed-success'));
       } else {
         receiver.src = rawUrl;
         console.log(`${LOG_PREFIX} ⚠️ Equalizer failed, fallback to raw stream.`);

@@ -24,7 +24,9 @@ export class Equalizer {
 
         this.sourceElement = audio;
         this.originalAudioSrc = audio.src; // Capture the initial source URL
-        console.log("21",this.sourceElement , this.originalAudioSrc);
+
+    // this.sourceElement.src = ""; // Set initial src to empty string
+    // this.originalAudioSrc = "";
 
         try {
             this.sourceElement.crossOrigin = 'anonymous';
@@ -129,17 +131,21 @@ export class Equalizer {
 
     /** Helper: Fetches audio from the HTML element's current src and decodes it. */
     private async prepareAudioBuffer() {
-        if (this.cachedAudioBuffer) return;
-        await this.unlockAudioContext();
+try {
+            if (this.cachedAudioBuffer) return;
+            await this.unlockAudioContext();
 
-        const resp = await fetch(this.sourceElement.src);
-        if (!resp.ok) {
-            throw new Error(`Fetch failed with status: ${resp.status} for URL: ${this.sourceElement.src}`);
-        }
+            const resp = await fetch(this.sourceElement.src);
+            if (!resp.ok) {
+                throw new Error(`Fetch failed with status: ${resp.status} for URL: ${this.sourceElement.src}`);
+            }
 
-        const arrayBuf = await resp.arrayBuffer();
-        const audioBuf = await this.ctx.decodeAudioData(arrayBuf);
-        this.cachedAudioBuffer = audioBuf;
+            const arrayBuf = await resp.arrayBuffer();
+            const audioBuf = await this.ctx.decodeAudioData(arrayBuf);
+            this.cachedAudioBuffer = audioBuf;
+} catch (error) {
+    console.log("147",error);
+}
     }
 
     /** Load IR file, decode, store buffer */
@@ -301,6 +307,60 @@ export class Equalizer {
             document.dispatchEvent(new CustomEvent('equalizer:processed-ready', { detail: { success: true } }));
         } catch (e) { }
     }
+    // /** Converts the rendered AudioBuffer into a WAV Blob and sets the audio.src. */
+    // private async switchToProcessedAudioMode(buffer: AudioBuffer): Promise<void> {
+    //     // --- WAV Encoding Logic (As provided in previous answer) ---
+    //     const bufferToWav = (b: AudioBuffer) => {
+    //         const numOfChan = b.numberOfChannels, length = b.length * numOfChan * 2 + 44, buffer = new ArrayBuffer(length), view = new DataView(buffer), channels = [], sampleRate = b.sampleRate;
+    //         let offset = 0, i = 0, l = 0;
+    //         const writeString = (s: string) => { for (i = 0; i < s.length; i++) { view.setUint8(offset + i, s.charCodeAt(i)); } };
+    //         // RIFF header
+    //         writeString('RIFF'); offset += 4; view.setUint32(offset, 36 + length - 44, true); offset += 4; writeString('WAVE'); offset += 4;
+    //         // FMT sub-chunk
+    //         writeString('fmt '); offset += 4; view.setUint32(offset, 16, true); offset += 4; view.setUint16(offset, 1, true); offset += 2; view.setUint16(offset, numOfChan, true); offset += 2; view.setUint32(offset, sampleRate, true); offset += 4; view.setUint32(offset, sampleRate * numOfChan * 2, true); offset += 4; view.setUint16(offset, numOfChan * 2, true); offset += 2; view.setUint16(offset, 16, true); offset += 2;
+    //         // Data sub-chunk
+    //         writeString('data'); offset += 4; view.setUint32(offset, length - offset, true); offset += 4;
+    //         // Write PCM data
+    //         for (i = 0; i < numOfChan; i++) { channels.push(b.getChannelData(i)); }
+    //         const multiplier = 32767;
+    //         while (l < b.length) {
+    //             for (i = 0; i < numOfChan; i++) {
+    //                 let sample = channels[i][l] * multiplier;
+    //                 sample = Math.max(-multiplier, Math.min(multiplier, sample));
+    //                 view.setInt16(offset, sample, true);
+    //                 offset += 2;
+    //             }
+    //             l++;
+    //         }
+    //         return new Blob([view], { type: 'audio/wav' });
+    //     };
+    //     // --- End WAV Encoding Logic ---
+
+    //     const wavBlob = bufferToWav(buffer);
+
+    //     if (this.processedAudioUrl) {
+    //         URL.revokeObjectURL(this.processedAudioUrl);
+    //     }
+
+    //     const url = URL.createObjectURL(wavBlob);
+    //     this.processedAudioUrl = url;
+
+    //     // Reset position before changing src
+    //     this.sourceElement.currentTime = 0;
+
+    //     // IMPORTANT: Change the source to the processed WAV file (allows background play)
+    //     this.sourceElement.src = url;
+    //     this.sourceElement.load();
+
+    //     // Resume playback if it was paused before the process began
+    //     if (!this.sourceElement.paused) {
+    //         this.sourceElement.play().catch(e => console.warn("Failed to auto-play processed audio:", e));
+    //     }
+
+    //     try {
+    //         document.dispatchEvent(new CustomEvent('equalizer:processed-ready', { detail: { success: true } }));
+    //     } catch (e) { }
+    // }
 
     /**
      * Public entry point: Attempts to render the audio offline, falling back to original source on failure.

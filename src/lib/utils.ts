@@ -32,21 +32,18 @@ export const hostResolver = (url: string) =>
 
 export function proxyHandler(url: string, prefetch: boolean = false) {
   const isVideo = Boolean(document.querySelector('video'));
-  const useProxy = true
-  // const useProxy = state.enforceProxy || store.stream.author.endsWith('- Topic') && !isVideo && store.api.status === 'P';
+  const useProxy = state.enforceProxy || store.stream.author.endsWith('- Topic') && !isVideo && store.api.status === 'P';
 
   store.api.index = 0;
   if (!prefetch)
     title.textContent = i18n('player_audiostreams_insert');
   const link = new URL(url);
   const origin = link.origin.slice(8);
-  const host = link.searchParams.get('host');
-console.log("43",(url + (host ? '' : `&host=${origin}`)) ,
-    url.replace(origin, "yt.omada.cafe"));
-  return "https://yt.omada.cafe/videoplayback?expire=1763426410&ei=Cmwbade2LeCl-coPm6DsyAw&ip=76.8.147.117&id=o-ABJAowfMH7uVSXfL3DxY889gI9xCHS2Jd8ZCAA-GXVp2&itag=250&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=96&met=1763404810%2C&mh=PH&mm=31%2C29&mn=sn-j85aaxt-jv0l%2Csn-q4fl6nz7&ms=au%2Crdu&mv=m&mvi=3&pl=24&rms=au%2Cau&gcr=us&initcwndbps=4372500&bui=AdEuB5RY8HHFA4jDsqXKMvBa7UCmpbaULhlBst16AlrsWiyPkbx4KMqiRgAPpWh9Qwm3aoKzSMLfo4Ym&spc=6b0G_KtsIGSkgpPLgF10n-xpqRZJ7zir-SRiL66l0QB4Tn4tUv9RL6DtgHvD9fcWz1M&vprv=1&svpuc=1&mime=audio%2Fwebm&ns=JPS3SGeyg-lJr0Q0kbbKFvUQ&rqh=1&gir=yes&clen=2152179&dur=222.281&lmt=1726262529795639&mt=1763404633&fvip=5&keepalive=yes&fexp=51552689%2C51565115%2C51565682%2C51580968&c=TVHTML5_SIMPLY&sefc=1&txp=4532434&n=YlZy_wCX7ZuKQw&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cgcr%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Cns%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRgIhAOzJLriTxJwFQiUVWJGEbpqXVNBFOopqIRhegM_uh-OYAiEA9VEIpYwdSHTl0f_23W6yi0j48jRfp6lEFJy-H2KETmE%3D&sig=AJfQdSswRgIhAKN0vhR4ryYBJ813nyFyq3ipEpVsJw_amFWQk_d9-oH2AiEA1WO0FanAivPTJHOmG7Uwq22ojrFq8_bIqumB9zcsf40%3D&pot=MnzwsmSiaeVxZfDyHkyWau5Hi7tDo-_SgbfYDTaRSylvWoF45Kf4CGJCTwJgumXaN5ZnQP0JqEVe-gYmvsIpXTGXGEWcI2VXi6TlQtEufPROqBwmj4ED6yML4UccREExbMRq3EBBGtiQKU_pRSE5nijZCYvbBgXTNlGVJYhW&cver=1.0&alr=no"
-  // return useProxy ?
-  //   (url + (host ? '' : `&host=${origin}`)) :
-  //   (host && !state.customInstance) ? url.replace(origin, host) : url;
+  const host = link.searchParams.get('host') || "yt.omada.cafe";
+
+  return useProxy ?
+    (url + (host ? '' : `&host=${origin}`)) :
+    (host && !state.customInstance) ? url.replace(origin, host) : url;
 }
 
 export async function quickSwitch() {
