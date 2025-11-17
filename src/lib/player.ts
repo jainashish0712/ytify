@@ -123,10 +123,7 @@ export default async function player(id: string | null = '') {
     };
 
     const initEQ = async () => {
-        if (eq) {
-            console.log("125", eq);
-            return
-        };
+        if (eq) return;
 
         // small helper: show a simple transient toast and brief underline/highlight
         const showToast = (text = 'Info') => {
@@ -258,11 +255,4 @@ export default async function player(id: string | null = '') {
     } else {
         await initEQ();
     }
-
-    // Listen for stream data ready event
-    const onStreamReady = async () => {
-        await initEQ();
-        document.removeEventListener('stream:data-ready', onStreamReady);
-    };
-    document.addEventListener('stream:data-ready', onStreamReady);
 }
