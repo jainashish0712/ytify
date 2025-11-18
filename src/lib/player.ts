@@ -13,7 +13,7 @@ document.addEventListener('audio:processed-success', () => {
     if (document.getElementById(id)) return;
     const el = document.createElement('div');
     el.id = id;
-    el.textContent = '✅ Processed audio assigned (Equalizer)';
+    el.textContent = '✅';
     Object.assign(el.style, {
         position: 'fixed',
         right: '12px',
@@ -85,15 +85,21 @@ console.log("57",audio);
         eq = new Equalizer(audio);
 
         // --- EQ Configuration (Static settings for the offline render) ---
-        eq.setBandGain('bass', 4);    // boost bass
-        eq.setBandGain('mid', 6);     // neutral mid
-        eq.setBandGain('treble', -4); // neutral treble
-        eq.setPitch(0.41);            // pitch will be baked into the final audio speed
+        // Example: boost lowshelf, cut highshelf, adjust mids
+        eq.setBandGain('lowshelf', 4);    // boost lowshelf (60Hz)
+        eq.setBandGain('lowMid', 2);      // slight boost low-mid (150Hz)
+        eq.setBandGain('midLow', 0);      // neutral mid-low (400Hz)
+        eq.setBandGain('mid', 0);         // neutral mid (1000Hz)
+        eq.setBandGain('midHigh', 0);     // neutral mid-high (2000Hz)
+        eq.setBandGain('highMid', 0);     // neutral high-mid (4000Hz)
+        eq.setBandGain('high', -2);       // slight cut high (8000Hz)
+        eq.setBandGain('highshelf', -4);  // cut highshelf (16000Hz)
+        eq.setPitch(0.41);                // pitch will be baked into the final audio speed
         // --- End Configuration ---
 
-
-        const freqs = new Float32Array([40, 1000, 3000]);
-        const mag = eq.getFrequencyResponse('bass', freqs);
+        // Example frequency response for lowshelf
+        const freqs = new Float32Array([40, 150, 400, 1000, 2000, 4000, 8000, 16000]);
+        const mag = eq.getFrequencyResponse('lowshelf', freqs);
         console.log(mag);
 
         // Helper to load IR safely
@@ -158,7 +164,7 @@ console.log("57",audio);
         // }
     };
 
-        await initEQ();
+        // await initEQ();
 
     if (!id) return;
 

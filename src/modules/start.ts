@@ -10,7 +10,7 @@ import '../scripts/queue';
 export default async function() {
 
   const { customInstance, shareAction, HLS } = state;
-console.log("13",state, player);
+// console.log("13",state, player);
   if (customInstance) {
 
     const [pi, iv, useInvidious] = customInstance.split(',');

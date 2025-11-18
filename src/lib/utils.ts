@@ -53,7 +53,9 @@ export async function quickSwitch() {
   const timeOfSwitch = audio.currentTime;
   await player(store.stream.id);
   audio.currentTime = timeOfSwitch;
-  audio.play();
+    if (audio.src.startsWith('blob:')) {
+    audio.play();
+  };
 }
 
 

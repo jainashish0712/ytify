@@ -20,7 +20,7 @@ export class Equalizer {
     constructor(audio: HTMLAudioElement) {
         const { index, invidious } = store.api;
 
-        console.log("23",audio);
+        // console.log("23",audio);
 
         this.sourceElement = audio;
         this.originalAudioSrc = audio.src; // Capture the initial source URL
@@ -42,14 +42,28 @@ export class Equalizer {
             this.ctx.createBiquadFilter(),
             this.ctx.createBiquadFilter(),
             this.ctx.createBiquadFilter(),
+            this.ctx.createBiquadFilter(),
+            this.ctx.createBiquadFilter(),
+            this.ctx.createBiquadFilter(),
+            this.ctx.createBiquadFilter(),
+            this.ctx.createBiquadFilter(),
         ];
-        this.filters[0].type = 'lowshelf';
-        this.filters[0].frequency.value = 40;
-        this.filters[1].type = 'peaking';
-        this.filters[1].frequency.value = 1000;
-        this.filters[1].Q.value = 1;
-        this.filters[2].type = 'highshelf';
-        this.filters[2].frequency.value = 9000;
+        // Band definitions
+        const bandDefs = [
+            { type: 'lowshelf',  freq: 40,    Q: 1 },
+            { type: 'peaking',   freq: 150,   Q: 1 },
+            { type: 'peaking',   freq: 400,   Q: 1 },
+            { type: 'peaking',   freq: 1000,  Q: 1 },
+            { type: 'peaking',   freq: 2000,  Q: 1 },
+            { type: 'peaking',   freq: 4000,  Q: 1 },
+            { type: 'peaking',   freq: 8000,  Q: 1 },
+            { type: 'highshelf', freq: 16000, Q: 1 },
+        ];
+        for (let i = 0; i < this.filters.length; i++) {
+            this.filters[i].type = bandDefs[i].type as BiquadFilterType;
+            this.filters[i].frequency.value = bandDefs[i].freq;
+            this.filters[i].Q.value = bandDefs[i].Q;
+        }
 
         this.convolver = this.ctx.createConvolver();
         this.preamp = this.ctx.createGain();
@@ -204,8 +218,7 @@ try {
         }
 
         const audioBuf = this.cachedAudioBuffer;
-        const rate = audioBuf.sampleRate;
-
+        const rate = this.ctx.sampleRate; // Use hardware sample rate
         const playbackRate = this.semitonesToPlaybackRate(this.pitchSemitones);
         const newLength = Math.ceil(audioBuf.length / playbackRate);
 
@@ -234,15 +247,15 @@ try {
 
         const convolver = offlineCtx.createConvolver();
         convolver.buffer = this.irBuffer; // Use the loaded IR
-
-        const preamp = offlineCtx.createGain();
-        preamp.gain.value = Math.pow(10, 12 / 20); // Convolver gain compensation
+const preamp = offlineCtx.createGain();
+preamp.gain.value =Math.pow(1, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20)
 
         // 4. Connect the chain
         source.connect(filters[0]);
-        filters[0].connect(filters[1]);
-        filters[1].connect(filters[2]);
-        filters[2].connect(preamp);
+        for (let i = 0; i < filters.length - 1; i++) {
+            filters[i].connect(filters[i + 1]);
+        }
+        filters[filters.length - 1].connect(preamp);
         preamp.connect(convolver);
         convolver.connect(offlineCtx.destination);
 
@@ -295,13 +308,28 @@ try {
         this.sourceElement.currentTime = 0;
 
         // IMPORTANT: Change the source to the processed WAV file (allows background play)
-        this.sourceElement.src = url;
-        this.sourceElement.load();
+        console.log("iOS Debug: processedAudioUrl", url);
+console.log("iOS Debug: sampleRate", buffer.sampleRate);
+console.log("iOS Debug: audio element state", this.sourceElement.readyState, this.sourceElement.paused);
 
-        // Resume playback if it was paused before the process began
-        if (!this.sourceElement.paused) {
-            this.sourceElement.play().catch(e => console.warn("Failed to auto-play processed audio:", e));
-        }
+if (this.isIOSorSafari()) {
+    this.sourceElement.pause();
+    this.sourceElement.src = '';
+    this.sourceElement.load();
+    this.sourceElement.src = url;
+    this.sourceElement.load();
+    this.sourceElement.currentTime = 0;
+    setTimeout(() => {
+        this.sourceElement.play().catch(e => console.warn("Failed to auto-play processed audio:", e));
+    }, 100); // small delay for iOS
+} else {
+    this.sourceElement.currentTime = 0;
+    this.sourceElement.src = url;
+    this.sourceElement.load();
+    if (!this.sourceElement.paused) {
+        this.sourceElement.play().catch(e => console.warn("Failed to auto-play processed audio:", e));
+    }
+}
 
         try {
             document.dispatchEvent(new CustomEvent('equalizer:processed-ready', { detail: { success: true } }));
@@ -368,7 +396,7 @@ try {
     public async renderAndPlayProcessedAudio(): Promise<void> {
         // Ensure the audio element has its *original* source set so we can fetch it.
         // NOTE: This assumes player.ts has set the initial audio.src right before calling initEQ.
-        console.log("311",this.sourceElement,this);
+        // console.log("311",this.sourceElement,this);
         if (!this.sourceElement.src) {
             console.warn("Audio element has no source URL.");
             return;
@@ -410,19 +438,42 @@ try {
         }
     }
 
-    // Set band gain
-    setBandGain(band: 'bass' | 'mid' | 'treble', gain: number) {
-        if (band === 'bass') this.filters[0].gain.value = gain;
-        else if (band === 'mid') this.filters[1].gain.value = gain;
-        else if (band === 'treble') this.filters[2].gain.value = gain;
+    // Use only 8-band names (no legacy/overlapping names)
+    private static bandMap: { [key: string]: number } = {
+        lowshelf: 0,
+        lowMid: 1,
+        midLow: 2,
+        mid: 3,
+        midHigh: 4,
+        highMid: 5,
+        high: 6,
+        highshelf: 7
+    };
+
+    // Set band gain for any band by name or index
+    setBandGain(band: string | number, gain: number) {
+        let idx: number;
+        if (typeof band === 'number') {
+            idx = band;
+        } else {
+            idx = Equalizer.bandMap[band];
+            if (idx === undefined) throw new Error(`Unknown band: ${band}`);
+        }
+        if (this.filters[idx]) this.filters[idx].gain.value = gain;
         // NOTE: Changes will ONLY take effect on the NEXT renderAndPlayProcessedAudio call!
     }
 
-    // Get frequency response
-    getFrequencyResponse(band: 'bass' | 'mid' | 'treble', frequencies: Float32Array): Float32Array {
+    // Get frequency response for any band by name or index
+    getFrequencyResponse(band: string | number, frequencies: Float32Array): Float32Array {
+        let idx: number;
+        if (typeof band === 'number') {
+            idx = band;
+        } else {
+            idx = Equalizer.bandMap[band];
+            if (idx === undefined) throw new Error(`Unknown band: ${band}`);
+        }
         const mag = new Float32Array(frequencies.length);
         const phase = new Float32Array(frequencies.length);
-        const idx = band === 'bass' ? 0 : band === 'mid' ? 1 : 2;
         this.filters[idx].getFrequencyResponse(frequencies, mag, phase);
         return mag;
     }

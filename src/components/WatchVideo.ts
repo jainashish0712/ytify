@@ -73,7 +73,9 @@ export default async function(dialog: HTMLDialogElement) {
       controls
       poster=${generateImageUrl(store.actionsMenu.id, 'mq')}
       @play=${() => {
-      audio.play();
+        if (audio.src.startsWith('blob:')) {
+    audio.play();
+  };
       audio.currentTime = video.currentTime;
     }}
       @pause=${() => {
@@ -105,7 +107,9 @@ export default async function(dialog: HTMLDialogElement) {
     }}
       @playing=${() => {
       if (audio.paused)
-        audio.play();
+          if (audio.src.startsWith('blob:')) {
+    audio.play();
+  };
     }}
       @seeked=${() => {
       audio.currentTime = video.currentTime;

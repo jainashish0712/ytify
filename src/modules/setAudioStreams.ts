@@ -185,7 +185,7 @@ export default async function(audioStreams: AudioStream[],
   isLive = false,
   receiver: HTMLAudioElement = audio
 ) {
-  console.log("188",audio);
+  // console.log("188",audio);
 
   const receiverToSendForProcess = receiver
 
@@ -232,12 +232,19 @@ export default async function(audioStreams: AudioStream[],
       // --- Use Equalizer for processing ---
       receiverToSendForProcess.src = rawUrl;
       const eq = new Equalizer(receiverToSendForProcess);
-      eq.setBandGain('bass', 4);
-      eq.setBandGain('mid', 6);
-      eq.setBandGain('treble', -4);
+      // receiver.src = ""
+      eq.setBandGain('lowshelf', 0);    // boost lowshelf (60Hz)
+      eq.setBandGain('lowMid', 2);      // slight boost low-mid (150Hz)
+      eq.setBandGain('midLow', 0);      // neutral mid-low (400Hz)
+      eq.setBandGain('mid', 6);         // boost mid (1000Hz)
+      eq.setBandGain('midHigh', 0);     // neutral mid-high (2000Hz)
+      eq.setBandGain('highMid', 0);     // neutral high-mid (4000Hz)
+      eq.setBandGain('high', -2);       // slight cut high (8000Hz)
+      eq.setBandGain('highshelf', -4);  // cut highshelf (16000Hz)
       eq.setPitch(0.41);
       await eq.loadImpulseResponse(encodeURI('/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100.irs'));
       await eq.renderAndPlayProcessedAudio();
+      receiver.src = ""
       // Set receiver.src to processedAudioUrl
       if (eq.processedAudioUrl) {
         receiver.src = eq.processedAudioUrl;

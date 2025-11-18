@@ -36,7 +36,9 @@ playButton.onclick = function() {
   )
     audio.pause();
   else
+      if (audio.src.startsWith('blob:')) {
     audio.play();
+  };
 }
 
 
@@ -81,7 +83,9 @@ const playableCheckerID = setInterval(() => {
 
 audio.onloadstart = function() {
   playButton.classList.replace('ri-loader-3-line', 'ri-play-circle-fill');
-  if (isPlayable) audio.play();
+  if (isPlayable)   if (audio.src.startsWith('blob:')) {
+    audio.play();
+  };
   historyID = store.stream.id;
   clearTimeout(historyTimeoutId);
 
@@ -154,13 +158,21 @@ audio.onloadedmetadata = function() {
 
 
 audio.oncanplaythrough = async function() {
+  // Only play if src is a processed WAV blob
+  if (audio.src.startsWith('blob:')) {
+      if (audio.src.startsWith('blob:')) {
+    audio.play();
+  };
+  } else {
+    // Optionally, you can log or handle the case where src is not ready
+    console.log('Waiting for processed WAV blob URL...');
+  }
   // prefetch beforehand to speed up experience
   const nextItem = state.prefetch && store.queue.list[0];
   if (!nextItem) return;
 
   const data = await getStreamData(nextItem, true);
   const sandbox = new Audio();
-  // sandbox.onerror = () => audioErrorHandler(sandbox);
   console.log("164",data);
   if ('audioStreams' in data)
     import('../modules/setAudioStreams')
@@ -234,7 +246,9 @@ if (volume) {
 
 if (msn) {
   navigator.mediaSession.setActionHandler('play', () => {
+      if (audio.src.startsWith('blob:')) {
     audio.play();
+  };
   });
   navigator.mediaSession.setActionHandler('pause', () => {
     audio.pause();
