@@ -39,6 +39,7 @@ export function proxyHandler(url: string, prefetch: boolean = false) {
     title.textContent = i18n('player_audiostreams_insert');
   const link = new URL(url);
   const origin = link.origin.slice(8);
+  console.log("42",link, origin,link.searchParams.get('host'));
   const host = link.searchParams.get('host') || "yt.omada.cafe";
 
   return useProxy ?
@@ -53,9 +54,7 @@ export async function quickSwitch() {
   const timeOfSwitch = audio.currentTime;
   await player(store.stream.id);
   audio.currentTime = timeOfSwitch;
-    if (audio.src.startsWith('blob:')) {
-    audio.play();
-  };
+  audio.play();
 }
 
 

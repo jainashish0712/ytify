@@ -11,7 +11,8 @@ export default function() {
   h.on(Hls.Events.MANIFEST_PARSED, () => {
     h.currentLevel = state.quality === 'high' ?
       h.levels.findIndex(l => l.audioCodec === 'mp4a.40.2') : 0;
-      if (audio.src.startsWith('blob:')) {
+      // if (audio.src.startsWith('blob:')) {
+if (audio.src) {
     audio.play();
   };
   });

@@ -210,6 +210,7 @@ export default async function(audioStreams: AudioStream[],
 
   // 🔴 Apply proxyHandler to get the actual proxied URL
   const rawUrl = proxyHandler(stream.url, prefetch);
+  console.log("422",stream.url, prefetch, rawUrl);
 
   // 🔴 STORE the original proxied URL for error handling
   receiver.dataset.originalStreamUrl = rawUrl;

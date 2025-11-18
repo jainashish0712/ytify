@@ -1,3 +1,4 @@
+import { audio } from "./dom";
 import { store } from "./store";
 
 // --- Equalizer.ts ---
@@ -67,7 +68,7 @@ export class Equalizer {
 
         this.convolver = this.ctx.createConvolver();
         this.preamp = this.ctx.createGain();
-        this.preamp.gain.value = 1;
+        this.preamp.gain.value = 5;
 
         // Ensure context is resumed / unlocked on play
         audio.addEventListener('play', () => {
@@ -218,6 +219,7 @@ try {
         }
 
         const audioBuf = this.cachedAudioBuffer;
+        console.log(":222",audioBuf);
         const rate = this.ctx.sampleRate; // Use hardware sample rate
         const playbackRate = this.semitonesToPlaybackRate(this.pitchSemitones);
         const newLength = Math.ceil(audioBuf.length / playbackRate);
@@ -248,7 +250,7 @@ try {
         const convolver = offlineCtx.createConvolver();
         convolver.buffer = this.irBuffer; // Use the loaded IR
 const preamp = offlineCtx.createGain();
-preamp.gain.value =Math.pow(1, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20)
+preamp.gain.value =Math.pow(5, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20)
 
         // 4. Connect the chain
         source.connect(filters[0]);
@@ -267,7 +269,9 @@ preamp.gain.value =Math.pow(1, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20
     }
 
     /** Converts the rendered AudioBuffer into a WAV Blob and sets the audio.src. */
-    private async switchToProcessedAudioMode(buffer: AudioBuffer): Promise<void> {
+    private async switchToProcessedAudioMode(buffer: AudioBuffer, seekTime: number = 0): Promise<void> {
+        const msn = 'mediaSession' in navigator;
+        console.log("271",buffer, audio,msn);
         // --- WAV Encoding Logic (As provided in previous answer) ---
         const bufferToWav = (b: AudioBuffer) => {
             const numOfChan = b.numberOfChannels, length = b.length * numOfChan * 2 + 44, buffer = new ArrayBuffer(length), view = new DataView(buffer), channels = [], sampleRate = b.sampleRate;
@@ -318,14 +322,14 @@ if (this.isIOSorSafari()) {
     this.sourceElement.load();
     this.sourceElement.src = url;
     this.sourceElement.load();
-    this.sourceElement.currentTime = 0;
+    this.sourceElement.currentTime = seekTime; // <-- use passed time
     setTimeout(() => {
         this.sourceElement.play().catch(e => console.warn("Failed to auto-play processed audio:", e));
-    }, 100); // small delay for iOS
+    }, 100);
 } else {
-    this.sourceElement.currentTime = 0;
     this.sourceElement.src = url;
     this.sourceElement.load();
+    this.sourceElement.currentTime = seekTime; // <-- use passed time
     if (!this.sourceElement.paused) {
         this.sourceElement.play().catch(e => console.warn("Failed to auto-play processed audio:", e));
     }
@@ -418,9 +422,10 @@ if (this.isIOSorSafari()) {
         try {
             // 1. Render the effect chain (includes pitch and EQ settings)
             const processedBuffer = await this.renderAudioOffline();
-
-            // 2. Convert to WAV Blob and update the player source
-            await this.switchToProcessedAudioMode(processedBuffer);
+console.log(":424:",processedBuffer);
+// 2. Convert to WAV Blob and update the player source
+await this.switchToProcessedAudioMode(processedBuffer, (window as any).lastAudioTime || 0);
+// console.log(":424:",);
 
             console.log("Offline processing successful. Playing processed WAV.");
 

@@ -6,6 +6,12 @@ import { addToCollection } from "../lib/libraryUtils";
 import audioErrorHandler from "../modules/audioErrorHandler";
 import getStreamData from "../modules/getStreamData";
 
+declare global {
+  interface Window {
+    lastAudioTime: number;
+  }
+}
+
 const playSpeed = <HTMLSelectElement>document.getElementById('playSpeed');
 const seekBwdButton = <HTMLButtonElement>document.getElementById('seekBwdButton');
 const seekFwdButton = <HTMLButtonElement>document.getElementById('seekFwdButton');
@@ -20,6 +26,7 @@ const volumeIcon = <HTMLLabelElement>volumeChanger.previousElementSibling;
 
 const msn = 'mediaSession' in navigator;
 function updatePositionState() {
+  console.log("23:",Math.floor(audio.currentTime || 0));
   if (msn && 'setPositionState' in navigator.mediaSession)
     navigator.mediaSession.setPositionState({
       duration: audio.duration || 0,
@@ -36,7 +43,8 @@ playButton.onclick = function() {
   )
     audio.pause();
   else
-      if (audio.src.startsWith('blob:')) {
+      // if (audio.src.startsWith('blob:')) {
+if (audio.src) {
     audio.play();
   };
 }
@@ -83,7 +91,8 @@ const playableCheckerID = setInterval(() => {
 
 audio.onloadstart = function() {
   playButton.classList.replace('ri-loader-3-line', 'ri-play-circle-fill');
-  if (isPlayable)   if (audio.src.startsWith('blob:')) {
+  if (isPlayable)   // if (audio.src.startsWith('blob:')) {
+if (audio.src) {
     audio.play();
   };
   historyID = store.stream.id;
@@ -115,14 +124,20 @@ playSpeed.onchange = function() {
 
 
 seekFwdButton.onclick = function() {
-  audio.currentTime += 15;
+  audio.currentTime += 5;
   updatePositionState();
 }
 
 
 seekBwdButton.onclick = function() {
-  audio.currentTime -= 15;
+  audio.currentTime -= 5;
   updatePositionState();
+  // setupRealtimeBassBoost();
+  // if (bassFilter) {
+  //   bassGain += 10;
+  //   bassFilter.gain.value = bassGain;
+  //   console.log('Bass gain increased to', bassGain);
+  // }
 }
 
 
@@ -137,6 +152,8 @@ progress.onchange = function() {
 }
 
 audio.ontimeupdate = function() {
+  window.lastAudioTime = audio.currentTime; // Track every second
+
   if (progress === document.activeElement)
     return;
 
@@ -159,8 +176,10 @@ audio.onloadedmetadata = function() {
 
 audio.oncanplaythrough = async function() {
   // Only play if src is a processed WAV blob
-  if (audio.src.startsWith('blob:')) {
-      if (audio.src.startsWith('blob:')) {
+  // if (audio.src.startsWith('blob:')) {
+if (audio.src) {
+      // if (audio.src.startsWith('blob:')) {
+if (audio.src) {
     audio.play();
   };
   } else {
@@ -246,7 +265,8 @@ if (volume) {
 
 if (msn) {
   navigator.mediaSession.setActionHandler('play', () => {
-      if (audio.src.startsWith('blob:')) {
+      // if (audio.src.startsWith('blob:')) {
+if (audio.src) {
     audio.play();
   };
   });
@@ -254,11 +274,11 @@ if (msn) {
     audio.pause();
   });
   navigator.mediaSession.setActionHandler("seekforward", () => {
-    audio.currentTime += 15;
+    audio.currentTime += 5;
     updatePositionState();
   });
   navigator.mediaSession.setActionHandler("seekbackward", () => {
-    audio.currentTime -= 15;
+    audio.currentTime -= 5;
     updatePositionState();
   });
   navigator.mediaSession.setActionHandler("seekto", e => {
@@ -274,5 +294,22 @@ if (msn) {
     updatePositionState();
   });
 }
+
+// let realtimeCtx: AudioContext | null = null;
+// let bassFilter: BiquadFilterNode | null = null;
+// let sourceNode: MediaElementAudioSourceNode | null = null;
+// let bassGain = 0;
+
+// function setupRealtimeBassBoost() {
+//   if (realtimeCtx) return;
+//   realtimeCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+//   sourceNode = realtimeCtx.createMediaElementSource(audio);
+//   bassFilter = realtimeCtx.createBiquadFilter();
+//   bassFilter.type = 'lowshelf';
+//   bassFilter.frequency.value = 40;
+//   bassFilter.gain.value = bassGain;
+//   sourceNode.connect(bassFilter);
+//   bassFilter.connect(realtimeCtx.destination);
+// }
 
 
