@@ -234,7 +234,7 @@ export default async function(audioStreams: AudioStream[],
       receiverToSendForProcess.src = rawUrl;
       const eq = new Equalizer(receiverToSendForProcess);
       // receiver.src = ""
-      eq.setBandGain('lowshelf', 0);    // boost lowshelf (60Hz)
+      eq.setBandGain('lowshelf', 3);    // boost lowshelf (60Hz)
       eq.setBandGain('lowMid', 2);      // slight boost low-mid (150Hz)
       eq.setBandGain('midLow', 0);      // neutral mid-low (400Hz)
       eq.setBandGain('mid', 6);         // boost mid (1000Hz)

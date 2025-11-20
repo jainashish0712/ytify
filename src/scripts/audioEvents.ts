@@ -26,7 +26,7 @@ const volumeIcon = <HTMLLabelElement>volumeChanger.previousElementSibling;
 
 const msn = 'mediaSession' in navigator;
 function updatePositionState() {
-  console.log("23:",Math.floor(audio.currentTime || 0));
+  // console.log("23:",Math.floor(audio.currentTime || 0));
   if (msn && 'setPositionState' in navigator.mediaSession)
     navigator.mediaSession.setPositionState({
       duration: audio.duration || 0,
@@ -204,7 +204,7 @@ if (audio.src) {
       ));
 }
 
-// audio.onerror = () => audioErrorHandler(audio);
+audio.onerror = () => audioErrorHandler(audio);
 
 
 loopButton.onclick = function() {
