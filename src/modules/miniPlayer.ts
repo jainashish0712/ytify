@@ -22,7 +22,7 @@ export function miniPlayerRoutingHandler(inHome: boolean, header: DOMTokenList) 
 
   if (inHome) {
     header.add('hide');
-    document.getElementById('upperLayer')!.prepend(imgMem);
+    // document.getElementById('upperLayer')!.prepend(imgMem);
     document.getElementById('meta')!.prepend(title, author);
     document.getElementById('playerControls')!.insertBefore(playButton, document.getElementById('seekFwdButton'));
   }

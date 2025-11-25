@@ -20,8 +20,8 @@ const fullDuration = <HTMLParagraphElement>document.getElementById('fullDuration
 const playPrevButton = <HTMLButtonElement>document.getElementById('playPrevButton');
 const playNextButton = <HTMLButtonElement>document.getElementById('playNextButton');
 const loopButton = <HTMLButtonElement>document.getElementById('loopButton');
-const volumeChanger = <HTMLInputElement>document.getElementById('volumeChanger');
-const volumeIcon = <HTMLLabelElement>volumeChanger.previousElementSibling;
+// const volumeChanger = <HTMLInputElement>document.getElementById('volumeChanger');
+// const volumeIcon = <HTMLLabelElement>volumeChanger.previousElementSibling;
 
 
 const msn = 'mediaSession' in navigator;
@@ -233,33 +233,33 @@ function onEnd() {
 audio.onended = playNextButton.onclick = onEnd;
 
 
-volumeIcon.onclick = function() {
-  volumeChanger.value = audio.volume ? '0' : '100';
-  audio.volume = audio.volume ? 0 : 1;
-  volumeIcon.classList.replace(
-    volumeIcon.className,
-    `ri-volume-${volumeIcon.className.includes('mute') ? 'up' : 'mute'
-    }-fill`
-  );
-}
+// volumeIcon.onclick = function() {
+//   volumeChanger.value = audio.volume ? '0' : '100';
+//   audio.volume = audio.volume ? 0 : 1;
+//   volumeIcon.classList.replace(
+//     volumeIcon.className,
+//     `ri-volume-${volumeIcon.className.includes('mute') ? 'up' : 'mute'
+//     }-fill`
+//   );
+// }
 
-volumeChanger.oninput = function() {
-  audio.volume = parseFloat(volumeChanger.value) / 100;
+// volumeChanger.oninput = function() {
+//   audio.volume = parseFloat(volumeChanger.value) / 100;
 
-  setState('volume', volumeChanger.value);
+//   setState('volume', volumeChanger.value);
 
-  volumeIcon.classList.replace(
-    volumeIcon.className,
-    audio.volume ?
-      `ri-volume-${audio.volume > 0.5 ? 'up' : 'down'}-fill` :
-      'ri-volume-mute-fill');
-}
+//   volumeIcon.classList.replace(
+//     volumeIcon.className,
+//     audio.volume ?
+//       `ri-volume-${audio.volume > 0.5 ? 'up' : 'down'}-fill` :
+//       'ri-volume-mute-fill');
+// }
 
-const { volume } = state;
-if (volume) {
-  volumeChanger.value = volume;
-  audio.volume = parseFloat(volumeChanger.value) / 100;
-}
+// const { volume } = state;
+// if (volume) {
+//   volumeChanger.value = volume;
+//   audio.volume = parseFloat(volumeChanger.value) / 100;
+// }
 
 
 

@@ -86,14 +86,14 @@ console.log("57",audio);
 
         // --- EQ Configuration (Static settings for the offline render) ---
         // Example: boost lowshelf, cut highshelf, adjust mids
-        eq.setBandGain('lowshelf', 4);    // boost lowshelf (60Hz)
-        eq.setBandGain('lowMid', 2);      // slight boost low-mid (150Hz)
+        eq.setBandGain('lowshelf', 0);    // boost lowshelf (60Hz)
+        eq.setBandGain('lowMid', 1);      // slight boost low-mid (150Hz)
         eq.setBandGain('midLow', 0);      // neutral mid-low (400Hz)
         eq.setBandGain('mid', 0);         // neutral mid (1000Hz)
         eq.setBandGain('midHigh', 0);     // neutral mid-high (2000Hz)
         eq.setBandGain('highMid', 0);     // neutral high-mid (4000Hz)
-        eq.setBandGain('high', -2);       // slight cut high (8000Hz)
-        eq.setBandGain('highshelf', -4);  // cut highshelf (16000Hz)
+        eq.setBandGain('high', -3);       // slight cut high (8000Hz)
+        eq.setBandGain('highshelf', -5);  // cut highshelf (16000Hz)
         eq.setPitch(0.41);                // pitch will be baked into the final audio speed
         // --- End Configuration ---
 

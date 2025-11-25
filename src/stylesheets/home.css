@@ -1,10 +1,24 @@
 #home {
   height: 100vh;
   gap: 5vmin;
-  width: 100%;
-  padding: 5%;
+  padding: 5% 8%;
   background: var(--onBg);
   --rx2: calc(var(--roundness)*1.5);
+  position: relative;
+  overflow: hidden;
+
+  #bg-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    filter: blur(20px) brightness(0.5);
+    transform: scale(1.2);
+    z-index: -1;
+  }
 
   select {
     font-size: 0.8rem;
@@ -26,12 +40,13 @@
     }
 
     #meta {
+      /* margin: 00px 0; */
       display: flex;
       flex-direction: column;
       justify-content: space-between;
 
       #title {
-        font-size: 1.2rem;
+        font-size: 1.3rem;
         font-weight: bold;
       }
 
@@ -98,11 +113,12 @@
 
   #playerControls {
     width: 100%;
+    margin: 5% 0;
     display: flex;
     justify-content: space-between;
 
     button {
-      font-size: 1.6rem;
+      font-size: 2rem;
       color: var(--text);
       padding: 0;
     }
@@ -143,12 +159,12 @@
     }
 
     #meta {
-      margin-top: 5%;
+      margin-top: 90%;
     }
-
+/*
     #volumeContainer input {
       display: none;
-    }
+    } */
   }
 
   @media(orientation:landscape) {
@@ -206,8 +222,8 @@
 
 /* === range theme and appearance === */
 input[type="range"] {
-  font-size: 1.5rem;
-  color: var(--bg);
+  font-size: 2rem;
+  color: black;
   filter: invert();
   --thumb-height: 0.625em;
   --track-height: 0.125em;
@@ -345,3 +361,136 @@ input[type="range"]:active::-moz-range-progress {
 input[type="range"]:disabled::-moz-range-thumb {
   cursor: not-allowed;
 }
+/*
+
+#home,
+#miniPlayer {
+  position: relative;
+  overflow: hidden;
+}
+
+#home::before,
+#miniPlayer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--current-thumb, none);
+  background-size: cover;
+  background-position: center;
+  filter: blur(30px) brightness(0.6) saturate(4.5);
+  transform: scale(1);
+  z-index: -1;
+}
+
+#home > *,
+#miniPlayer > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+@keyframes spinBG {
+  from {
+    transform: scale(2) rotate(0deg);
+  }
+  to {
+    transform: scale(2) rotate(360deg);
+  }
+}
+
+#home::before,
+#miniPlayer::before {
+  animation: 20s linear infinite;
+  filter: blur(20px) brightness(0.7) saturate(4.5) ;
+} */
+
+/* ============================================
+   Album-art split: top half sharp, bottom half blurred
+   Uses --current-thumb CSS var; falls back to bundled image.
+   ============================================ */
+
+/* fallback image (your uploaded file) */
+:root {
+  --thumb-fallback: url("/mnt/data/5707656d-dcbc-4f40-9671-821f297875dc.png");
+}
+
+/* container */
+#home,
+#miniPlayer {
+  position: relative;
+  overflow: hidden;
+  /* ensure stacking context */
+  isolation: isolate;
+}
+
+/* blurred background layer (full cover) */
+#home::before,
+#miniPlayer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--current-thumb, var(--thumb-fallback));
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.12);         /* avoid edges while blurring/rotating */
+  filter: blur(20px) brightness(0.55) saturate(3);
+  transition: filter 300ms ease, transform 300ms ease;
+}
+
+/* sharp top-half art */
+#home::after,
+#miniPlayer::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 52%;
+  filter: brightness(1) saturate(1.35)  ;
+                  /* top portion visible and sharp */
+  z-index: 1;
+  background-image: var(--current-thumb, var(--thumb-fallback));
+  background-size: cover;
+  background-position: center;
+  transform-origin: center center;
+  pointer-events: none;           /* don't block clicks */
+  /* soft bottom edge fade so it blends into the blurred area */
+  mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+}
+
+/* optional tint overlay to keep text readable in the blur area */
+#home .blur-tint,
+#miniPlayer .blur-tint {
+  position: absolute;
+  inset: 50% 0 0 0;               /* covers lower half */
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.0), rgba(0,0,0,0.45));
+  filter: saturate(2);
+}
+
+/* keep UI above layers */
+#home > *,
+#miniPlayer > * {
+  position: relative;
+  z-index: 3;
+}
+
+/* Smooth transition when thumbnail updates */
+#home::before,
+#home::after,
+#miniPlayer::before,
+#miniPlayer::after {
+  transition: background-image 300ms ease, opacity 300ms ease;
+}
+
+/* Small responsive tweak so the top art doesn't get too tall on large screens */
+@media (min-height: 800px) {
+  #home::after,
+  #miniPlayer::after {
+    height: 48%;
+  }
+}
+

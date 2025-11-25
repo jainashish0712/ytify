@@ -8,16 +8,14 @@ import './scripts/theme';
 
 addEventListener('DOMContentLoaded', async () => {
 
-
   (await import('./modules/start')).default();
-
   (await import('./components/SuperCollectionList')).default();
-
 
   const settingsHandler = document.getElementById('settingsHandler');
   settingsHandler?.addEventListener('click', async () => {
     (await import('./components/Settings/index')).default();
   });
+
   const fullscreenToggle = document.getElementById('fullscreenBtn');
   fullscreenToggle?.addEventListener('click', () => {
     if (document.fullscreenElement)
@@ -25,6 +23,49 @@ addEventListener('DOMContentLoaded', async () => {
     else
       document.documentElement.requestFullscreen();
   });
+
+  /* ---------------------------------------------
+       ADDED: Sync thumbnail → CSS blurred background
+     --------------------------------------------- */
+  function setCurrentThumb(url: string | null) {
+    if (!url) {
+      document.documentElement.style.removeProperty('--current-thumb');
+      return;
+    }
+    document.documentElement.style.setProperty('--current-thumb', `url("${url}")`);
+  }
+
+
+
+
+const miniImg = document.getElementById('img') as HTMLImageElement | null;
+if (miniImg) {
+  function setCurrentThumb(url: string | null) {
+    if (!url) document.documentElement.style.removeProperty('--current-thumb');
+    else document.documentElement.style.setProperty('--current-thumb', `url("${url}")`);
+  }
+  miniImg.addEventListener('load', () => setCurrentThumb(miniImg.src || null));
+  if (miniImg.src) setCurrentThumb(miniImg.src);
+}
+
+  // const miniImg = document.getElementById('img') as HTMLImageElement | null;
+  // if (miniImg) {
+  //   miniImg.addEventListener('load', () => setCurrentThumb(miniImg.src || null));
+
+  //   if (miniImg.src) setCurrentThumb(miniImg.src);
+
+  //   const mo = new MutationObserver(muts => {
+  //     for (const m of muts) {
+  //       if (m.type === 'attributes' && m.attributeName === 'src') {
+  //         setCurrentThumb(miniImg.src || null);
+  //       }
+  //     }
+  //   });
+  //   mo.observe(miniImg, { attributes: true });
+  // }
+  /* --------------------------------------------- */
+
+
 
   if (import.meta.env.PROD)
     await import('virtual:pwa-register').then(pwa => {
@@ -48,4 +89,4 @@ addEventListener('DOMContentLoaded', async () => {
       });
     });
 
-})
+});
