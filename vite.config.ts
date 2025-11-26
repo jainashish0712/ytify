@@ -95,7 +95,7 @@ export default defineConfig(({ command }) => ({
 }));
 
 
-const injectEruda = (serve: boolean) => (<PluginOption>{
+const injectEruda = (serve: boolean) => serve ? (<PluginOption>{
   name: 'erudaInjector',
   transformIndexHtml: html => ({
     html,
@@ -114,7 +114,7 @@ const injectEruda = (serve: boolean) => (<PluginOption>{
       }
     ]
   })
-});
+}) : [];
 
 
 
