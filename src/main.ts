@@ -82,9 +82,9 @@ if (miniImg) {
             }
           })
 
-          import('./components/UpdatePrompt')
-            .then(mod => mod.default(dialog))
-            .then(() => document.body.appendChild(dialog));
+          // import('./components/UpdatePrompt')
+          //   .then(mod => mod.default(dialog))
+          //   .then(() => document.body.appendChild(dialog));
         }
       });
     });

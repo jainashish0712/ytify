@@ -248,7 +248,7 @@ input[type="range"],
 input[type="range"]::-webkit-slider-runnable-track,
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  transition: all ease 100ms;
+  transition: all ease 1ms;
   height: var(--thumb-height);
 }
 
@@ -304,7 +304,7 @@ input[type="range"],
 input[type="range"]::-moz-range-track,
 input[type="range"]::-moz-range-thumb {
   appearance: none;
-  transition: all ease 100ms;
+  transition: all ease 1ms;
   height: var(--thumb-height);
 }
 
@@ -432,9 +432,9 @@ input[type="range"]:disabled::-moz-range-thumb {
   z-index: 0;
   background-image: var(--current-thumb, var(--thumb-fallback));
   background-size: cover;
-  background-position: center;
-  transform: scale(1.12);         /* avoid edges while blurring/rotating */
-  filter: blur(20px) brightness(0.55) saturate(3);
+  background-position: 50%;
+  transform: scale(1);         /* avoid edges while blurring/rotating */
+  filter: blur(35px) brightness(0.65) saturate(3);
   transition: filter 300ms ease, transform 300ms ease;
 }
 
