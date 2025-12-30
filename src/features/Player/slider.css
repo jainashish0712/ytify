@@ -1,0 +1,272 @@
+/* === range theme and appearance === */
+input[type="range"] {
+  font-size: 1.5rem;
+  --thumb-height: 0.625em;
+  --track-height: 0.125em;
+  --track-color: var(--onBg);
+  --brightness-hover: 180%;
+  --brightness-down: 80%;
+  --clip-edges: 0.125em;
+  /* === range commons === */
+  position: relative;
+  background: #fff0;
+  overflow: hidden;
+}
+
+
+input[type="range"]:active {
+  cursor: grabbing;
+}
+
+
+/* === WebKit specific styles === */
+input[type="range"],
+input[type="range"]::-webkit-slider-runnable-track,
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  transition: all ease 1ms;
+  height: var(--thumb-height);
+}
+
+input[type="range"]::-webkit-slider-runnable-track,
+input[type="range"]::-webkit-slider-thumb {
+  position: relative;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  --thumb-radius: calc((var(--thumb-height) * 0.5) - 1px);
+  --clip-top: calc((var(--thumb-height) - var(--track-height)) * 0.5 - 0.5px);
+  --clip-bottom: calc(var(--thumb-height) - var(--clip-top));
+  --clip-further: calc(100% + 1px);
+  --box-fill: calc(-100vmax - var(--thumb-width, var(--thumb-height))) 0 0 100vmax currentColor;
+
+  width: var(--thumb-width, var(--thumb-height));
+  background: linear-gradient(currentColor 0 0) scroll no-repeat left center / 50% calc(var(--track-height) + 1px);
+  background-color: currentColor;
+  box-shadow: var(--box-fill);
+  border-radius: var(--thumb-width, var(--thumb-height));
+
+  filter: brightness(100%);
+  clip-path: polygon(100% -1px,
+      var(--clip-edges) -1px,
+      0 var(--clip-top),
+      -100vmax var(--clip-top),
+      -100vmax var(--clip-bottom),
+      0 var(--clip-bottom),
+      var(--clip-edges) 100%,
+      var(--clip-further) var(--clip-further));
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  filter: brightness(var(--brightness-hover));
+  cursor: grab;
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+  filter: brightness(var(--brightness-down));
+  cursor: grabbing;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  background: linear-gradient(var(--track-color) 0 0) scroll no-repeat center / 100% calc(var(--track-height) + 1px);
+}
+
+input[type="range"]:disabled::-webkit-slider-thumb {
+  cursor: not-allowed;
+}
+
+/* === Firefox specific styles === */
+input[type="range"],
+input[type="range"]::-moz-range-track,
+input[type="range"]::-moz-range-thumb {
+  appearance: none;
+  transition: all ease 1ms;
+  height: var(--thumb-height);
+}
+
+input[type="range"]::-moz-range-track,
+input[type="range"]::-moz-range-thumb,
+input[type="range"]::-moz-range-progress {
+  background: #fff0;
+}
+
+input[type="range"]::-moz-range-thumb {
+  background: currentColor;
+  border: 0;
+  width: var(--thumb-width, var(--thumb-height));
+  border-radius: var(--thumb-width, var(--thumb-height));
+  cursor: grab;
+}
+
+input[type="range"]:active::-moz-range-thumb {
+  cursor: grabbing;
+}
+
+input[type="range"]::-moz-range-track {
+  width: 100%;
+  background: var(--track-color);
+}
+
+input[type="range"]::-moz-range-progress {
+  appearance: none;
+  background: currentColor;
+  transition-delay: 30ms;
+}
+
+input[type="range"]::-moz-range-track,
+input[type="range"]::-moz-range-progress {
+  height: calc(var(--track-height) + 1px);
+  border-radius: var(--track-height);
+}
+
+input[type="range"]::-moz-range-thumb,
+input[type="range"]::-moz-range-progress {
+  filter: brightness(100%);
+}
+
+input[type="range"]:hover::-moz-range-thumb,
+input[type="range"]:hover::-moz-range-progress {
+  filter: brightness(var(--brightness-hover));
+}
+
+input[type="range"]:active::-moz-range-thumb,
+input[type="range"]:active::-moz-range-progress {
+  filter: brightness(var(--brightness-down));
+}
+
+input[type="range"]:disabled::-moz-range-thumb {
+  cursor: not-allowed;
+}
+/*
+
+#home,
+#miniPlayer {
+  position: relative;
+  overflow: hidden;
+}
+
+#home::before,
+#miniPlayer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--current-thumb, none);
+  background-size: cover;
+  background-position: center;
+  filter: blur(30px) brightness(0.6) saturate(4.5);
+  transform: scale(1);
+  z-index: -1;
+}
+
+#home > *,
+#miniPlayer > * {
+  position: relative;
+  z-index: 1;
+}
+
+
+@keyframes spinBG {
+  from {
+    transform: scale(2) rotate(0deg);
+  }
+  to {
+    transform: scale(2) rotate(360deg);
+  }
+}
+
+#home::before,
+#miniPlayer::before {
+  animation: 20s linear infinite;
+  filter: blur(20px) brightness(0.7) saturate(4.5) ;
+} */
+
+/* ============================================
+   Album-art split: top half sharp, bottom half blurred
+   Uses --current-thumb CSS var; falls back to bundled image.
+   ============================================ */
+
+/* fallback image (your uploaded file) */
+:root {
+  --thumb-fallback: url("/mnt/data/5707656d-dcbc-4f40-9671-821f297875dc.png");
+}
+
+/* container */
+#home,
+#miniPlayer {
+  position: relative;
+  overflow: hidden;
+  /* ensure stacking context */
+  isolation: isolate;
+}
+
+/* blurred background layer (full cover) */
+#home::before,
+#miniPlayer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: var(--current-thumb, var(--thumb-fallback));
+  background-size: cover;
+  background-position: 50%;
+  transform: scale(1);         /* avoid edges while blurring/rotating */
+  filter: blur(35px) brightness(0.65) saturate(3);
+  transition: filter 300ms ease, transform 300ms ease;
+}
+
+/* sharp top-half art */
+#home::after,
+#miniPlayer::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 52%;
+  filter: brightness(1) saturate(1.35)  ;
+                  /* top portion visible and sharp */
+  z-index: 1;
+  background-image: var(--current-thumb, var(--thumb-fallback));
+  background-size: cover;
+  background-position: center;
+  transform-origin: center center;
+  pointer-events: none;           /* don't block clicks */
+  /* soft bottom edge fade so it blends into the blurred area */
+  mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+}
+
+/* optional tint overlay to keep text readable in the blur area */
+#home .blur-tint,
+#miniPlayer .blur-tint {
+  position: absolute;
+  inset: 50% 0 0 0;               /* covers lower half */
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.0), rgba(0,0,0,0.45));
+  filter: saturate(2);
+}
+
+/* keep UI above layers */
+#home > *,
+#miniPlayer > * {
+  position: relative;
+  z-index: 3;
+}
+
+/* Smooth transition when thumbnail updates */
+#home::before,
+#home::after,
+#miniPlayer::before,
+#miniPlayer::after {
+  transition: background-image 300ms ease, opacity 300ms ease;
+}
+
+/* Small responsive tweak so the top art doesn't get too tall on large screens */
+@media (min-height: 800px) {
+  #home::after,
+  #miniPlayer::after {
+    height: 48%;
+  }
+}
+
