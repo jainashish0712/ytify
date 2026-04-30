@@ -145,7 +145,7 @@ const apiMiddleware = (serve: boolean): PluginOption => serve ? {
     server.middlewares.use(async (req, res, next) => {
       const url = new URL(req.url || '', 'http://localhost');
       const path = url.pathname.replace(/^\/api\//, '').replace(/^\//, '');
-      
+
       if (endpoints.includes(path) || req.url?.startsWith('/api/')) {
         const { createLocalAdapter } = await server.ssrLoadModule('./src/backend/localAdapter.ts');
         const adapter = createLocalAdapter();

@@ -34,13 +34,21 @@ export default {
     const origin = request.headers.get('Origin');
     const allowedOrigin = (origin && ALLOWED_ORIGINS.includes(origin)) ? origin : 'https://ytify.pp.ua';
 
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': allowedOrigin,
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400',
-      'Vary': 'Origin'
-    };
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Max-Age': '86400'
+  // Remove Vary: Origin when using wildcard
+};
+    // const corsHeaders = {
+    //   'Access-Control-Allow-Origin': "*",
+    //   // 'Access-Control-Allow-Origin': allowedOrigin,
+    //   'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    //   'Access-Control-Allow-Headers': 'Content-Type',
+    //   'Access-Control-Max-Age': '86400',
+    //   'Vary': 'Origin'
+    // };
 
     if (request.method === 'OPTIONS') {
       return new Response(null, {
