@@ -1,9 +1,14 @@
-import { createRoot } from "solid-js";
+import { createRoot, createEffect } from "solid-js";
 import { createStore } from "solid-js/store";
 import { navStore, params, updateParam, addToQueue, queueStore, setQueueStore, setStore, store, groupQueueByAuthor } from "@stores";
 import { config, cssVar, themer, addToCollection, player, shuffle } from "@utils";
+import { Equalizer } from './equalizer'; // Import Equalizer
+import { irsStore } from "./irs"; // Import irsStore
+import { getIrsPath } from "@utils/irs"; // Import getIrsPath
 
-const blankImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+export let equalizerInstance: Equalizer | null = null; // Export equalizerInstance
+
+const blankImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUZCIjCB0C8AAAAASUVORK5CYII=';
 
 type PlayerStore = {
   stream: TrackItem & { albumId?: string },
@@ -115,7 +120,73 @@ createRoot(() => {
   if ('mediaSession' in navigator)
     import('@modules/mediaSession').then(m => m.initMediaSession());
 
-  playerStore.audio.volume = playerStore.volume;
+  // Instantiate Equalizer and enable real-time processing
+  equalizerInstance = new Equalizer(playerStore.audio);
+
+  // Enable real-time processing - this will handle context unlocking automatically
+  equalizerInstance.enableRealtimeProcessing(true);
+  equalizerInstance.debugAudioChain();
+
+  // Set initial volume on the equalizer's gain node
+  if (equalizerInstance && equalizerInstance.gainNode) {
+    equalizerInstance.gainNode.gain.value = playerStore.volume;
+    console.log("[player.ts] Initial equalizerInstance.gainNode.gain.value set to:", playerStore.volume);
+  }
+
+  // Initialize equalizer band gains with preset settings
+  if (equalizerInstance) {
+    console.log("[player.ts] === INITIALIZING EQUALIZER BANDS ===");
+    equalizerInstance.setBandGain('lowshelf', 0);    // neutral lowshelf (40Hz)
+    equalizerInstance.setBandGain('lowMid', 1);      // slight boost low-mid (150Hz)
+    equalizerInstance.setBandGain('midLow', 0);      // neutral mid-low (400Hz)
+    equalizerInstance.setBandGain('mid', 0);         // neutral mid (1000Hz)
+    equalizerInstance.setBandGain('midHigh', 0);     // neutral mid-high (2000Hz)
+    equalizerInstance.setBandGain('highMid', 0);     // neutral high-mid (4000Hz)
+    equalizerInstance.setBandGain('high', -3);       // slight cut high (8000Hz)
+    equalizerInstance.setBandGain('highshelf', -5);  // cut highshelf (16000Hz)
+    equalizerInstance.setPitch(0.41);
+    console.log("[player.ts] playerStore.audio.playbackRate after setPitch:", playerStore.audio.playbackRate);
+    console.log("[player.ts] === EQUALIZER BANDS INITIALIZED ===");
+  }
+
+  // Effect to react to IRS selection changes
+  createEffect(() => {
+    const selectedCategory = irsStore.selectedCategory;
+    const selectedFile = irsStore.selectedFile;
+    const newIrsPath = getIrsPath(selectedCategory, selectedFile);
+
+    if (equalizerInstance && newIrsPath) {
+      console.log("[player.ts] === DYNAMIC LOADING IMPULSE RESPONSE ===");
+      console.log("[player.ts] New IR URL:", newIrsPath);
+      equalizerInstance.loadImpulseResponse(encodeURI(newIrsPath))
+        .then(() => {
+          console.log("[player.ts] === DYNAMIC IMPULSE RESPONSE LOADED SUCCESSFULLY ===");
+          console.log("[player.ts] IR is now active in the audio chain");
+          equalizerInstance.debugAudioChain();
+        })
+        .catch(e => {
+          console.error("[player.ts] === DYNAMIC IMPULSE RESPONSE LOAD FAILED ===", e);
+          console.error("[player.ts] IR will NOT be applied to audio");
+          equalizerInstance.debugAudioChain();
+        });
+    } else if (equalizerInstance && !newIrsPath) {
+      console.warn("[player.ts] No valid IRS path for selected options. IR will not be applied.");
+      // Optionally, you might want to disable the convolver or load a "null" IR here.
+    }
+  });
+
+  // Expose debug function globally for testing
+  (window as any).debugAudioChain = () => {
+    if (equalizerInstance) {
+      equalizerInstance.debugAudioChain();
+    } else {
+      console.error("equalizerInstance not initialized");
+    }
+  };
+
+  console.log("[player.ts] Available debug commands:");
+  console.log("[player.ts]   window.debugAudioChain() - Check audio chain status");
+
 
   playerStore.audio.onended = () => {
     if (queueStore.list.length)

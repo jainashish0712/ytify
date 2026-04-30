@@ -3,6 +3,8 @@ import './Player.css'
 import { MediaDetails } from "@components/MediaPartials";
 import { config, cssVar } from "@utils";
 import { closeFeature, playerStore, setNavStore, setStore, t, updateParam } from "@stores";
+import { IRS_OPTIONS, getIrsPath } from "@utils/irs";
+import { irsStore, setIrsStore, updateSelectedIrsCategory, updateSelectedIrsFile } from "@stores/irs";
 
 const MediaArtwork = lazy(() => import('../../components/MediaPartials/MediaArtwork'));
 const Lyrics = lazy(() => import('./Lyrics'));
@@ -12,8 +14,8 @@ const Controls = lazy(() => import('./Controls'));
 export default function() {
   let playerSection!: HTMLDivElement;
 
-
   const [showLyrics, setShowLyrics] = createSignal(false);
+  const [availableIrsFiles, setAvailableIrsFiles] = createSignal(IRS_OPTIONS[0].files);
 
   onMount(() => {
     setNavStore('player', 'ref', playerSection);
@@ -29,11 +31,17 @@ export default function() {
     updateParam('s');
   });
 
-
   createEffect(() => {
     const { immersive, mediaArtwork } = playerStore;
     if (immersive)
       cssVar('--player-bg', `url(${mediaArtwork})`);
+  });
+
+  createEffect(() => {
+    const selectedCategory = IRS_OPTIONS.find(opt => opt.category === irsStore.selectedCategory);
+    if (selectedCategory) {
+      setAvailableIrsFiles(selectedCategory.files);
+    }
   });
 
 
@@ -62,6 +70,28 @@ export default function() {
             </Show>
           </Show>
         </p>
+
+        <div class="irs-selectors">
+          <select
+            value={irsStore.selectedCategory}
+            onchange={(e) => updateSelectedIrsCategory(e.currentTarget.value)}
+            aria-label="Select IRS Category"
+          >
+            {IRS_OPTIONS.map(option => (
+              <option value={option.category}>{option.category}</option>
+            ))}
+          </select>
+
+          <select
+            value={irsStore.selectedFile}
+            onchange={(e) => updateSelectedIrsFile(e.currentTarget.value)}
+            aria-label="Select IRS File"
+          >
+            {availableIrsFiles().map(file => (
+              <option value={file.name}>{file.name}</option>
+            ))}
+          </select>
+        </div>
 
         <div class="right-group">
 

@@ -1,5 +1,6 @@
 import { LikeButton, PlayButton, PlayNextButton } from "@components/MediaPartials";
 import { params, playerStore, playPrev, queueStore, setPlayerStore, updateParam, t } from "@stores";
+import { equalizerInstance } from '../../lib/stores/player'; // Direct relative import
 import { convertSStoHHMMSS, setConfig } from "@utils";
 import { Accessor, createSignal, onMount, Setter, Show } from "solid-js";
 
@@ -154,7 +155,11 @@ export default function(_: {
           onchange={e => {
             const ref = e.target;
             const vol = parseFloat(ref.value);
-            playerStore.audio.volume = vol;
+            console.log("[Controls.tsx] Volume slider onChange event fired. New value:", vol); // ADD THIS LINE
+            if (equalizerInstance) {
+              equalizerInstance.gainNode!.gain.value = vol;
+              console.log("[Controls.tsx] Volume slider changed to:", vol, "Equalizer gain set to:", equalizerInstance.gainNode!.gain.value);
+            }
             setConfig('volume', (vol * 100).toString());
             setPlayerStore('volume', vol);
             ref.blur();
