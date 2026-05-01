@@ -16,8 +16,10 @@ const ALLOWED_ORIGINS = [
   'https://ytify-zeta.vercel.app',
   'https://ytify-legacy.vercel.app',
   'https://ytify-2nx7.onrender.com',
+  'https://try-this.vercel.app',
   'http://localhost:3000',
-  'http://localhost:5173'
+  'http://localhost:5173',
+  'https://meq3d.netlify.app'
 ];
 
 export interface Env {
@@ -34,13 +36,13 @@ export default {
     const origin = request.headers.get('Origin');
     const allowedOrigin = (origin && ALLOWED_ORIGINS.includes(origin)) ? origin : 'https://ytify.pp.ua';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Access-Control-Max-Age': '86400'
-  // Remove Vary: Origin when using wildcard
-};
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': allowedOrigin,
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400',
+      'Vary': 'Origin'
+    };
     // const corsHeaders = {
     //   'Access-Control-Allow-Origin': "*",
     //   // 'Access-Control-Allow-Origin': allowedOrigin,
