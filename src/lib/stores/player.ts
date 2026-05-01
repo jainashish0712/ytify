@@ -332,7 +332,7 @@ createRoot(() => {
       const diff = isMusic ? (offsetHeight - offsetWidth) : offsetWidth;
       const scale = seconds / fullDuration;
       const shift = Math.floor(scale * diff);
-      cssVar('--player-bp', `-${shift}px 0`);
+      // cssVar('--player-bp', `-${shift}px 0`);
     }
 
     const t = params.get('t');
