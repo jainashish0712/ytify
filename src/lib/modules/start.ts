@@ -80,7 +80,7 @@ export default async function() {
 
   document.addEventListener('click', (e) => {
     const click = e.target as HTMLElement;
-    const detail = document.querySelector('details:open');
+    const detail = document.querySelector('details:open'); // when does this trigger and this is triggering only in iPhone. there are some issues when I pause the song on iOS for when I minimise the browser the song stops playing and I'm not even able to seek forward or backward from the control centre. I suspect the issue is something related to background play but I might be wrong I need you to check it
 
     if (!detail?.firstElementChild?.contains(click))
       detail?.removeAttribute('open');

@@ -2,3 +2,8 @@
 .idea
 dist
 package-lock.json
+/dist
+dist/**
+**/New folder
+/New folder/**
+dist/**

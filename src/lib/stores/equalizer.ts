@@ -1,3 +1,4 @@
+import { setPlayerStore } from "@stores";
 // --- Equalizer.ts ---
 // This class manages audio equalization and pitch shifting, supporting both
 // real-time processing via Web Audio API and offline pre-processing for compatibility.
@@ -20,16 +21,9 @@ export class Equalizer {
     private pitchSemitones: number = 2.41; // Using your configured default
 
     constructor(audio: HTMLAudioElement) {
-        // const { index, invidious } = store.api;
-
-        // console.log("23",audio);
-
         console.log("[Equalizer Constructor] === INITIALIZING EQUALIZER ===");
         this.sourceElement = audio;
         this.originalAudioSrc = audio.src; // Capture the initial source URL
-
-    // this.sourceElement.src = ""; // Set initial src to empty string
-    // this.originalAudioSrc = "";
 
         try {
             this.sourceElement.crossOrigin = 'anonymous';
@@ -78,20 +72,20 @@ export class Equalizer {
         this.gainNode = this.ctx.createGain(); // Initialize the gainNode
         console.log("[Equalizer Constructor] gainNode.gain.value (initial):", this.gainNode.gain.value);
 
-        // Ensure context is resumed / unlocked on play
-        audio.addEventListener('play', () => {
-            console.log("[Equalizer] Audio play event detected - unlocking context...");
-            this.unlockAudioContext();
-        });
+        // REMOVED: This listener caused issues on iOS by auto-resuming after pause.
+        // audio.addEventListener('play', () => {
+        //     console.log("[Equalizer] Audio play event detected - _unlockAudioContext...");
+        //     this._unlockAudioContext();
+        // });
 
         console.log("[Equalizer Constructor] === EQUALIZER INITIALIZATION COMPLETE ===");
     }
 
-    /** Setup automatic AudioContext unlock on first user gesture or audio play */
+    /** Setup automatic AudioContext _unlockAudioContext on first user gesture or audio play */
     private setupAudioContextUnlock(): void {
-        // Attempt unlock on first gesture
+        // Attempt _unlockAudioContext on first gesture
         const unlockGesture = async () => {
-            await this.unlockAudioContext();
+            await this._unlockAudioContext();
             document.body.removeEventListener('click', unlockGesture);
             document.body.removeEventListener('touchstart', unlockGesture);
         };
@@ -99,6 +93,68 @@ export class Equalizer {
         if (this.ctx.state === 'suspended') {
             document.body.addEventListener('click', unlockGesture, { once: true });
             document.body.addEventListener('touchstart', unlockGesture, { once: true });
+        }
+    }
+
+    // Public method to explicitly suspend the AudioContext
+    public async suspendContext(): Promise<void> {
+        if (this.ctx.state === 'running') {
+            console.log("[Equalizer.suspendContext] Suspending AudioContext...");
+            await this.ctx.suspend();
+            console.log("[Equalizer.suspendContext] AudioContext suspended. State:", this.ctx.state);
+        } else {
+            console.log("[Equalizer.suspendContext] AudioContext not running, no need to suspend. State:", this.ctx.state);
+        }
+    }
+
+    // Public method to explicitly resume the AudioContext
+    public async resumeContext(): Promise<void> {
+        if (this.ctx.state === 'suspended') {
+            console.log("[Equalizer.resumeContext] Resuming AudioContext...");
+            await this.ctx.resume();
+            console.log("[Equalizer.resumeContext] AudioContext resumed. State:", this.ctx.state);
+        } else {
+            console.log("[Equalizer.resumeContext] AudioContext not suspended, no need to resume. State:", this.ctx.state);
+        }
+    }
+
+
+    // Internal method for initial context unlock
+    private async _unlockAudioContext(): Promise<void> {
+        if (this.ctx.state === 'running') {
+            console.log("[Equalizer._unlockAudioContext] Context already running");
+            return;
+        }
+        console.log("[Equalizer._unlockAudioContext] Context state:", this.ctx.state, "- Attempting to resume...");
+
+        try {
+            console.log("[Equalizer._unlockAudioContext] Calling ctx.resume()...");
+            await this.ctx.resume();
+            console.log("[Equalizer._unlockAudioContext] ctx.resume() succeeded. State:", this.ctx.state);
+            await this.primeSilentBuffer();
+            return;
+        } catch (e) {
+            console.log("[Equalizer._unlockAudioContext] ctx.resume() failed:", e);
+        }
+
+        if (this.ctx.state === 'suspended') {
+            console.log("[Equalizer._unlockAudioContext] Context still suspended, waiting for gesture...");
+            await new Promise<void>((resolve) => {
+                const onGesture = async () => {
+                    console.log("[Equalizer._unlockAudioContext] Gesture detected, resuming context...");
+                    try {
+                        await this.ctx.resume();
+                        console.log("[Equalizer._unlockAudioContext] Gesture resume succeeded. State:", this.ctx.state);
+                        await this.primeSilentBuffer();
+                    } catch (err) { console.warn('[Equalizer._unlockAudioContext] AudioContext resume after gesture failed:', err); } finally {
+                        document.body.removeEventListener('click', onGesture);
+                        document.body.removeEventListener('touchstart', onGesture);
+                        resolve();
+                    }
+                };
+                document.body.addEventListener('click', onGesture, { once: true });
+                document.body.addEventListener('touchstart', onGesture, { once: true });
+            });
         }
     }
 
@@ -115,7 +171,7 @@ export class Equalizer {
         if (enabled) {
             // Ensure context is running before connecting the audio graph
             console.log("[Equalizer.enableRealtimeProcessing] Unlocking audio context...");
-            this.unlockAudioContext();
+            // this._unlockAudioContext(); // Use the internal unlocker
 
             // Enable real-time processing
             if (!this.mediaSourceNode) {
@@ -202,10 +258,10 @@ export class Equalizer {
         this.pitchSemitones = semitones;
         console.log(`[Equalizer.setPitch] Setting pitch to ${semitones} semitones`);
         console.log(`[Equalizer.setPitch] realtimeEnabled: ${this.realtimeEnabled}`);
-        if (true) {
-        // if (this.realtimeEnabled) {
+        if (this.realtimeEnabled) {
             const playbackRate = this.semitonesToPlaybackRate(semitones);
             this.sourceElement.playbackRate = playbackRate;
+            setPlayerStore('playbackRate', playbackRate); // <--- Add this line
             console.log(`[Equalizer.setPitch] Real-time pitch applied. Playback rate set to: ${playbackRate}. Current sourceElement.playbackRate: ${this.sourceElement.playbackRate}`);
         } else {
             // WARNING: This only affects the pitch of the NEXT call to renderAndPlayProcessedAudio.
@@ -217,53 +273,54 @@ export class Equalizer {
     public resetPitch(): void { this.setPitch(0); }
     // --- END PITCH METHODS ---
 
-    // --- UTILITY METHODS (Keep these as-is) ---
-    private isIOSorSafari(): boolean { /* ... logic as before ... */
+    // --- UTILITY METHODS ---
+    private isIOSorSafari(): boolean {
         const ua = navigator.userAgent;
-        const isIOS = /iP(hone|ad|od)/.test(ua);
+        // Detect iPhone, iPad, iPod, and iPad Pro (which reports as Macintosh but has touch points)
+        const isIOS = /iP(hone|ad|od)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
         return isIOS || isSafari;
     }
     public requiresUserGesture(): boolean { return this.isIOSorSafari(); }
     public isContextRunning(): boolean { return this.ctx.state === 'running'; }
-    public async unlockAudioContext(): Promise<void> { /* ... logic as before ... */
-        if (this.ctx.state === 'running') {
-            console.log("[Equalizer.unlockAudioContext] Context already running");
-            return;
-        }
-        console.log("[Equalizer.unlockAudioContext] Context state:", this.ctx.state, "- Attempting to resume...");
+    // The previous unlockAudioContext was causing issues, now using _unlockAudioContext internally
+    // public async unlockAudioContext(): Promise<void> { /* ... logic as before ... */
+    //     if (this.ctx.state === 'running') {
+    //         console.log("[Equalizer.unlockAudioContext] Context already running");
+    //         return;
+    //     }
+    //     console.log("[Equalizer.unlockAudioContext] Context state:", this.ctx.state, "- Attempting to resume...");
 
-        // if (this.ctx.state === 'running') return;
-        try {
-            console.log("[Equalizer.unlockAudioContext] Calling ctx.resume()...");
-            await this.ctx.resume();
-            console.log("[Equalizer.unlockAudioContext] ctx.resume() succeeded. State:", this.ctx.state);
-            await this.primeSilentBuffer();
-            return;
-        } catch (e) {
-            console.log("[Equalizer.unlockAudioContext] ctx.resume() failed:", e);
-        }
+    //     try {
+    //         console.log("[Equalizer.unlockAudioContext] Calling ctx.resume()...");
+    //         await this.ctx.resume();
+    //         console.log("[Equalizer.unlockAudioContext] ctx.resume() succeeded. State:", this.ctx.state);
+    //         await this.primeSilentBuffer();
+    //         return;
+    //     } catch (e) {
+    //         console.log("[Equalizer.unlockAudioContext] ctx.resume() failed:", e);
+    //     }
 
-        if (this.ctx.state === 'suspended') {
-            console.log("[Equalizer.unlockAudioContext] Context still suspended, waiting for gesture...");
-            await new Promise<void>((resolve) => {
-                const onGesture = async () => {
-                    console.log("[Equalizer.unlockAudioContext] Gesture detected, resuming context...");
-                    try {
-                        await this.ctx.resume();
-                        console.log("[Equalizer.unlockAudioContext] Gesture resume succeeded. State:", this.ctx.state);
-                        await this.primeSilentBuffer();
-                    } catch (err) { console.warn('[Equalizer.unlockAudioContext] AudioContext resume after gesture failed:', err); } finally {
-                        document.body.removeEventListener('click', onGesture);
-                        document.body.removeEventListener('touchstart', onGesture);
-                        resolve();
-                    }
-                };
-                document.body.addEventListener('click', onGesture, { once: true });
-                document.body.addEventListener('touchstart', onGesture, { once: true });
-            });
-        }
-    }
+    //     if (this.ctx.state === 'suspended') {
+    //         console.log("[Equalizer.unlockAudioContext] Context still suspended, waiting for gesture...");
+    //         await new Promise<void>((resolve) => {
+    //             const onGesture = async () => {
+    //                 console.log("[Equalizer.unlockAudioContext] Gesture detected, resuming context...");
+    //                 try {
+    //                     await this.ctx.resume();
+    //                     console.log("[Equalizer.unlockAudioContext] Gesture resume succeeded. State:", this.ctx.state);
+    //                     await this.primeSilentBuffer();
+    //                 } catch (err) { console.warn('[Equalizer.unlockAudioContext] AudioContext resume after gesture failed:', err); } finally {
+    //                     document.body.removeEventListener('click', onGesture);
+    //                     document.body.removeEventListener('touchstart', onGesture);
+    //                     resolve();
+    //                 }
+    //             };
+    //             document.body.addEventListener('click', onGesture, { once: true });
+    //             document.body.addEventListener('touchstart', onGesture, { once: true });
+    //         });
+    //     }
+    // }
     private async primeSilentBuffer(): Promise<void> { /* ... logic as before ... */
         console.log("[Equalizer.primeSilentBuffer] Priming silent buffer...");
         try {
@@ -287,7 +344,7 @@ export class Equalizer {
     private async prepareAudioBuffer() {
 try {
             if (this.cachedAudioBuffer) return;
-            await this.unlockAudioContext();
+            await this._unlockAudioContext();
 
             const resp = await fetch(this.sourceElement.src);
             if (!resp.ok) {
@@ -306,11 +363,11 @@ try {
     public async loadImpulseResponse(url: string) {
         console.log("[Equalizer.loadImpulseResponse] Starting to load IR from:", url);
         console.log("[Equalizer.loadImpulseResponse] realtimeEnabled:", this.realtimeEnabled);
-        await this.unlockAudioContext();
+        await this._unlockAudioContext();
         try {
             const resp = await fetch(url);
             if (!resp.ok) {
-                throw new Error(`IR Fetch failed with status: ${resp.status} for URL: ${url}`);
+                throw new Error(`IR Fetch failed with status: ${resp.status} for URL: ${this.sourceElement.src}`);
             }
             console.log("[Equalizer.loadImpulseResponse] IR file fetched successfully");
             const arrayBuffer = await resp.arrayBuffer();
@@ -577,56 +634,72 @@ if (this.isIOSorSafari()) {
     // }
 
     /**
+     * Public method to reset the equalizer state for a new track.
+     * @param newSrc The new source URL being loaded.
+     */
+    public reset(newSrc?: string): void {
+        // If the new source is our own processed blob, don't reset!
+        if (newSrc && this.processedAudioUrl && newSrc === this.processedAudioUrl) {
+            return;
+        }
+
+        console.log("[Equalizer] Resetting state for new track. New src:", newSrc);
+        this.cachedAudioBuffer = null;
+        if (this.processedAudioUrl) {
+            console.log("[Equalizer] Revoking old processed URL:", this.processedAudioUrl);
+            URL.revokeObjectURL(this.processedAudioUrl);
+            this.processedAudioUrl = null;
+        }
+        // If it's a genuine new track (not a blob), update originalAudioSrc
+        if (newSrc && !newSrc.startsWith('blob:')) {
+            this.originalAudioSrc = newSrc;
+        }
+    }
+
+    /**
      * Public entry point: Attempts to render the audio offline, falling back to original source on failure.
      */
     public async renderAndPlayProcessedAudio(): Promise<void> {
         if (this.realtimeEnabled) {
-            console.log("Real-time processing is enabled, skipping offline render.");
-            // If real-time is enabled, we assume the audio is already playing through the graph.
-            // Dispatch a success event as no re-processing is needed.
+            console.log("[Equalizer] Real-time processing is enabled, skipping offline render.");
             try {
                 document.dispatchEvent(new CustomEvent('equalizer:processed-ready', { detail: { success: true } }));
             } catch (e) { /* ignore */ }
             return;
         }
 
-        // Ensure the audio element has its *original* source set so we can fetch it.
-        // NOTE: This assumes player.ts has set the initial audio.src right before calling initEQ.
-        // console.log("311",this.sourceElement,this);
-        if (!this.sourceElement.src) {
-            console.warn("Audio element has no source URL.");
-            return;
-        }
-
-        // Check if the source is already the processed URL to prevent re-rendering
-        if (this.processedAudioUrl && this.sourceElement.src === this.processedAudioUrl) {
+        if (!this.sourceElement.src || this.sourceElement.src.startsWith('blob:')) {
+            console.log("[Equalizer] Skipping render: No source or already playing a blob.");
             return;
         }
 
         // Store the source now, in case HLS/other modules change it later
         if (this.sourceElement.src !== this.originalAudioSrc) {
             this.originalAudioSrc = this.sourceElement.src;
+            this.cachedAudioBuffer = null; // New track, clear buffer
         }
 
-        // NOTE: The UI module should probably show a loading spinner here!
-        console.log("Starting offline audio processing...");
+        console.log("[Equalizer] Starting offline audio processing...");
+        const currentTime = this.sourceElement.currentTime;
 
         try {
             // 1. Render the effect chain (includes pitch and EQ settings)
             const processedBuffer = await this.renderAudioOffline();
-console.log(":424:",processedBuffer);
-// 2. Convert to WAV Blob and update the player source
-await this.switchToProcessedAudioMode(processedBuffer, (window as any).lastAudioTime || 0);
-// console.log(":424:",);
 
-            console.log("Offline processing successful. Playing processed WAV.");
+            // 2. Convert to WAV Blob and update the player source
+            await this.switchToProcessedAudioMode(processedBuffer, currentTime);
+
+            console.log("[Equalizer] Offline processing successful. Playing processed WAV.");
 
         } catch (error) {
-            console.error("[EQ FATAL] Offline processing failed. Falling back to original audio source.", error);
+            console.error("[Equalizer] Offline processing failed. Falling back to original audio source.", error);
 
             // 3. Fallback to original behavior (must restore original src)
-            this.sourceElement.src = this.originalAudioSrc;
-            this.sourceElement.load();
+            if (this.originalAudioSrc && this.sourceElement.src !== this.originalAudioSrc) {
+                this.sourceElement.src = this.originalAudioSrc;
+                this.sourceElement.load();
+                this.sourceElement.currentTime = currentTime;
+            }
             this.processedAudioUrl = null;
 
             try {
@@ -689,7 +762,7 @@ await this.switchToProcessedAudioMode(processedBuffer, (window as any).lastAudio
 
     /** DEBUG: Log the current state of the audio chain */
     public debugAudioChain(): void {
-        console.log("\n=== AUDIO CHAIN DEBUG INFO ===");
+        console.log("=== AUDIO CHAIN DEBUG INFO ===");
         console.log("Realtime Enabled:", this.realtimeEnabled);
         console.log("AudioContext State:", this.ctx.state);
         console.log("MediaSourceNode Connected:", this.mediaSourceNode !== null);
@@ -701,11 +774,11 @@ await this.switchToProcessedAudioMode(processedBuffer, (window as any).lastAudio
         console.log("Source Element Volume:", this.sourceElement.volume);
         console.log("Source Element Playback Rate:", this.sourceElement.playbackRate);
         console.log("Source Element Src:", this.sourceElement.src);
-        console.log("\nFilter Gains:");
+        console.log("Filter Gains:");
         this.filters.forEach((filter, idx) => {
             const bandName = Object.keys(Equalizer.bandMap).find(key => Equalizer.bandMap[key] === idx) || `Band ${idx}`;
             console.log(`  ${bandName}: ${filter.gain.value}dB (Type: ${filter.type}, Freq: ${filter.frequency.value}Hz)`);
         });
-        console.log("==============================\n");
+        console.log("==============================");
     }
 }

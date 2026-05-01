@@ -37,7 +37,7 @@ type PlayerStore = {
 };
 
 const createInitialState = (): PlayerStore => ({
-  audio: new Audio(),
+  audio: Object.assign(new Audio(), { playsinline: true, "webkit-playsinline": true }), // Modified: Adding playsinline and webkit-playsinline attributes
   playbackState: 'none',
   context: { id: '', src: '' },
   status: '',
@@ -120,11 +120,29 @@ createRoot(() => {
   if ('mediaSession' in navigator)
     import('@modules/mediaSession').then(m => m.initMediaSession());
 
-  // Instantiate Equalizer and enable real-time processing
+  // Listen for visibility changes to manage AudioContext
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      console.log("[player.ts] Document visible - attempting to resume AudioContext");
+      equalizerInstance?.resumeContext();
+    } else {
+      console.log("[player.ts] Document hidden - AudioContext might be suspended by OS");
+    }
+  });
+
+  // Instantiate Equalizer
   equalizerInstance = new Equalizer(playerStore.audio);
 
-  // Enable real-time processing - this will handle context unlocking automatically
-  equalizerInstance.enableRealtimeProcessing(true);
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+  if (isIOS) {
+    console.log("[player.ts] iOS/Safari detected - using offline rendering for background play compatibility");
+    equalizerInstance.enableRealtimeProcessing(false);
+  } else {
+    // Enable real-time processing for other platforms - this will handle context unlocking automatically
+    equalizerInstance.enableRealtimeProcessing(true);
+  }
+
   equalizerInstance.debugAudioChain();
 
   // Set initial volume on the equalizer's gain node
@@ -163,6 +181,9 @@ createRoot(() => {
           console.log("[player.ts] === DYNAMIC IMPULSE RESPONSE LOADED SUCCESSFULLY ===");
           console.log("[player.ts] IR is now active in the audio chain");
           equalizerInstance.debugAudioChain();
+          if (isIOS && playerStore.playbackState === 'playing') {
+             equalizerInstance?.renderAndPlayProcessedAudio();
+          }
         })
         .catch(e => {
           console.error("[player.ts] === DYNAMIC IMPULSE RESPONSE LOAD FAILED ===", e);
@@ -171,7 +192,6 @@ createRoot(() => {
         });
     } else if (equalizerInstance && !newIrsPath) {
       console.warn("[player.ts] No valid IRS path for selected options. IR will not be applied.");
-      // Optionally, you might want to disable the convolver or load a "null" IR here.
     }
   });
 
@@ -201,6 +221,9 @@ createRoot(() => {
 
   playerStore.audio.onplaying = () => {
     setPlayerStore('playbackState', 'playing');
+    if (!isIOS) {
+        equalizerInstance?.resumeContext();
+    }
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => {
         m.updateMediaSessionPlaybackState('playing');
@@ -225,6 +248,9 @@ createRoot(() => {
 
   playerStore.audio.onpause = () => {
     setPlayerStore('playbackState', 'paused');
+    if (!isIOS) {
+        equalizerInstance?.suspendContext();
+    }
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => {
         m.updateMediaSessionPlaybackState('paused');
@@ -244,9 +270,24 @@ createRoot(() => {
   }, 500);
 
   playerStore.audio.onloadstart = () => {
-    setPlayerStore('playbackState', 'paused');
+    const isBlob = playerStore.audio.src.startsWith('blob:');
+
+    setPlayerStore('playbackState', isBlob ? playerStore.playbackState : 'paused');
     setPlayerStore('status', '');
-    if (isPlayable) playerStore.audio.play();
+
+    // Reset equalizer state for the new track (clears cached buffers)
+    // Pass the new src to avoid resetting if it's our own processed blob
+    equalizerInstance?.reset(playerStore.audio.src);
+
+    if (isPlayable) {
+      if (isIOS && !isBlob) {
+        // On iOS, don't play the raw source. Wait for onloadedmetadata -> renderAndPlayProcessedAudio.
+        console.log("[player.ts] onloadstart (iOS) - suppressing raw playback, waiting for render.");
+        setPlayerStore('playbackState', 'loading');
+      } else {
+        playerStore.audio.play();
+      }
+    }
 
     historyID = playerStore.stream.id;
     clearTimeout(historyTimeoutId);
@@ -256,6 +297,8 @@ createRoot(() => {
   playerStore.audio.onwaiting = () => {
     setPlayerStore('playbackState', 'loading')
   };
+
+  let lastMediaSessionUpdate = 0;
 
   playerStore.audio.ontimeupdate = () => {
     if (document.activeElement?.matches('input[type="range"]'))
@@ -271,6 +314,15 @@ createRoot(() => {
 
 
     setPlayerStore('currentTime', seconds);
+
+    // Update MediaSession position (throttled to every 2 seconds)
+    const now = Date.now();
+    if (now - lastMediaSessionUpdate > 2000) {
+        lastMediaSessionUpdate = now;
+        if ('mediaSession' in navigator) {
+            import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
+        }
+    }
 
 
     // Immersive Mode
@@ -307,6 +359,11 @@ createRoot(() => {
 
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
+
+    if (isIOS) {
+      console.log("[player.ts] onloadedmetadata (iOS) - triggering offline render for background play");
+      equalizerInstance?.renderAndPlayProcessedAudio();
+    }
   }
 
   playerStore.audio.oncanplaythrough = async function() {

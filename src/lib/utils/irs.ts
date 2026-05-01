@@ -2,17 +2,17 @@
 
 export const IRS_OPTIONS = [
   {
+    category: "Orchestra",
+    files: [
+      { name: "Standard (WAV)", path: "/irs/Orchestra.wav" },
+      { name: "Standard (IRS)", path: "/irs/Orchestra.irs" },
+    ],
+  },
+  {
     category: "Joe0Bloggs 3D headphones",
     files: [
       { name: "Surround Upmix 44.1kHz", path: "/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100.irs" },
       { name: "Surround Upmix 48kHz (WAV)", path: "/irs/Joe0Bloggs 3D headphones IRS--surround upmix-48000.wav" },
-    ],
-  },
-  {
-    category: "Orchestra",
-    files: [
-      { name: "Standard (IRS)", path: "/irs/Orchestra.irs" },
-      { name: "Standard (WAV)", path: "/irs/Orchestra.wav" },
     ],
   },
 ];
