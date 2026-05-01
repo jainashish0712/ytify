@@ -14,7 +14,7 @@ const storeInit: {
   locale: string,
   translations: Record<TranslationKeys, string> | {}
 } = {
-  api: import.meta.env.DEV ? '' : 'https://api.ytify.workers.dev',
+  api: import.meta.env.DEV ? '' : 'https://api.meq3d.workers.dev',
   useSaavn: true,
   locale: initLocale,
   translations: {},
