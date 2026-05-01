@@ -34,7 +34,7 @@ export default {
   ): Promise<Response> {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin');
-    const allowedOrigin = (origin && ALLOWED_ORIGINS.includes(origin)) ? origin : 'https://ytify.pp.ua';
+    const allowedOrigin = (origin && ALLOWED_ORIGINS.includes(origin)) ? origin : 'https://meq3d.netlify.app';
 
     const corsHeaders = {
       'Access-Control-Allow-Origin': allowedOrigin,
