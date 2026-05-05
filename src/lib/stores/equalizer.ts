@@ -22,9 +22,9 @@ export class Equalizer {
     constructor(audio: HTMLAudioElement) {
         // const { index, invidious } = store.api;
 
-        // console.log("23",audio);
+        //
 
-        console.log("[Equalizer Constructor] === INITIALIZING EQUALIZER ===");
+
         this.sourceElement = audio;
         this.originalAudioSrc = audio.src; // Capture the initial source URL
 
@@ -38,7 +38,7 @@ export class Equalizer {
         }
 
         this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        console.log("[Equalizer Constructor] AudioContext created - State:", this.ctx.state);
+
         // IMPORTANT: Unlock on first user gesture to enable real-time audio playback
         this.setupAudioContextUnlock();
 
@@ -73,18 +73,18 @@ export class Equalizer {
         this.convolver = this.ctx.createConvolver();
         this.preamp = this.ctx.createGain();
         this.preamp.gain.value = 1; // Changed from 5 to 1 for debugging
-        console.log("[Equalizer Constructor] preamp.gain.value:", this.preamp.gain.value);
+
 
         this.gainNode = this.ctx.createGain(); // Initialize the gainNode
-        console.log("[Equalizer Constructor] gainNode.gain.value (initial):", this.gainNode.gain.value);
+
 
         // Ensure context is resumed / unlocked on play
         audio.addEventListener('play', () => {
-            console.log("[Equalizer] Audio play event detected - unlocking context...");
+
             this.unlockAudioContext();
         });
 
-        console.log("[Equalizer Constructor] === EQUALIZER INITIALIZATION COMPLETE ===");
+
     }
 
     /** Setup automatic AudioContext unlock on first user gesture or audio play */
@@ -103,75 +103,75 @@ export class Equalizer {
     }
 
     public enableRealtimeProcessing(enabled: boolean): void {
-        console.log("[Equalizer.enableRealtimeProcessing] Called with enabled:", enabled, "Current state:", this.realtimeEnabled);
+
         if (enabled === this.realtimeEnabled) {
-            console.log("[Equalizer.enableRealtimeProcessing] Already in desired state, returning");
+
             return; // No change needed
         }
 
         this.realtimeEnabled = enabled;
-        console.log("[Equalizer.enableRealtimeProcessing] State changed to:", enabled);
+
 
         if (enabled) {
             // Ensure context is running before connecting the audio graph
-            console.log("[Equalizer.enableRealtimeProcessing] Unlocking audio context...");
+
             this.unlockAudioContext();
 
             // Enable real-time processing
             if (!this.mediaSourceNode) {
-                console.log("[Equalizer.enableRealtimeProcessing] Creating mediaSourceNode...");
+
                 // IMPORTANT: Create mediaSourceNode BEFORE muting to ensure proper capture
                 this.mediaSourceNode = this.ctx.createMediaElementSource(this.sourceElement);
-                console.log("[Equalizer.enableRealtimeProcessing] mediaSourceNode created");
+
 
                 // Connect the graph immediately after creating mediaSourceNode
-                console.log("[Equalizer.enableRealtimeProcessing] Connecting audio graph...");
+
                 this.mediaSourceNode.connect(this.preamp);
-                console.log("[Equalizer.enableRealtimeProcessing] mediaSourceNode -> preamp");
+
                 this.preamp.connect(this.filters[0]);
-                console.log("[Equalizer.enableRealtimeProcessing] preamp -> filters[0]");
+
                 for (let i = 0; i < this.filters.length - 1; i++) {
                     this.filters[i].connect(this.filters[i + 1]);
-                    console.log(`[Equalizer.enableRealtimeProcessing] filters[${i}] -> filters[${i + 1}]`);
+
                 }
 
-                console.log("[Equalizer.enableRealtimeProcessing] irBuffer loaded:", this.irBuffer !== null, "convolver.buffer:", this.convolver.buffer !== null);
+
                 if (this.irBuffer && this.convolver.buffer) {
                     // If impulse response is loaded, include convolver
-                    console.log("[Equalizer.enableRealtimeProcessing] Connecting convolver to chain");
+
                     this.filters[this.filters.length - 1].connect(this.convolver);
-                    console.log("[Equalizer.enableRealtimeProcessing] filters[last] -> convolver");
+
                     this.convolver.connect(this.gainNode!);
-                    console.log("[Equalizer.enableRealtimeProcessing] convolver -> gainNode");
+
                 } else {
                     // Otherwise, bypass convolver
-                    console.log("[Equalizer.enableRealtimeProcessing] BYPASSING convolver (not loaded yet)");
+
                     this.filters[this.filters.length - 1].connect(this.gainNode!);
-                    console.log("[Equalizer.enableRealtimeProcessing] filters[last] -> gainNode (bypassing convolver)");
+
                 }
                 this.gainNode!.connect(this.ctx.destination);
-                console.log("[Equalizer.enableRealtimeProcessing] gainNode -> destination");
 
-                console.log("[Equalizer.enableRealtimeProcessing] AUDIO GRAPH CONNECTED SUCCESSFULLY");
+
+
             } else {
-                console.log("[Equalizer.enableRealtimeProcessing] mediaSourceNode already exists, skipping creation");
+
             }
 
-            console.log("[Equalizer.enableRealtimeProcessing] === FINAL STATUS ===");
-            console.log("  sourceElement.src:", this.sourceElement.src);
-            console.log("  sourceElement.paused:", this.sourceElement.paused);
-            console.log("  sourceElement.readyState:", this.sourceElement.readyState);
-            console.log("  context.state:", this.ctx.state);
-            console.log("  gainNode.gain.value:", this.gainNode!.gain.value);
-            console.log("  mediaSourceNode connected:", this.mediaSourceNode !== null);
-            console.log("  convolver in chain:", this.irBuffer && this.convolver.buffer);
-            console.log("[Equalizer.enableRealtimeProcessing] === REAL-TIME PROCESSING ENABLED ===");
+
+
+
+
+
+
+
+
+
 
         } else {
             // Disable real-time processing
-            console.log("[Equalizer.enableRealtimeProcessing] Disabling real-time processing...");
+
             if (this.mediaSourceNode) {
-                console.log("[Equalizer.enableRealtimeProcessing] Disconnecting audio graph...");
+
                 // Disconnect the graph
                 this.mediaSourceNode.disconnect(this.preamp);
                 this.preamp.disconnect(this.filters[0]);
@@ -186,10 +186,10 @@ export class Equalizer {
                     this.filters[this.filters.length - 1].disconnect(this.gainNode!);
                 }
                 this.gainNode!.disconnect(this.ctx.destination);
-                console.log("[Equalizer.enableRealtimeProcessing] Audio graph disconnected");
+
             }
 
-            console.log("[Equalizer.enableRealtimeProcessing] Real-time equalizer processing DISABLED.");
+
         }
     }
 
@@ -200,13 +200,13 @@ export class Equalizer {
 
     public setPitch(semitones: number): void {
         this.pitchSemitones = semitones;
-        console.log(`[Equalizer.setPitch] Setting pitch to ${semitones} semitones`);
-        console.log(`[Equalizer.setPitch] realtimeEnabled: ${this.realtimeEnabled}`);
+
+
         if (true) {
         // if (this.realtimeEnabled) {
             const playbackRate = this.semitonesToPlaybackRate(semitones);
             this.sourceElement.playbackRate = playbackRate;
-            console.log(`[Equalizer.setPitch] Real-time pitch applied. Playback rate set to: ${playbackRate}. Current sourceElement.playbackRate: ${this.sourceElement.playbackRate}`);
+
         } else {
             // WARNING: This only affects the pitch of the NEXT call to renderAndPlayProcessedAudio.
             console.warn(`[Equalizer.setPitch] Real-time disabled. Pitch will apply on next offline render.`);
@@ -228,30 +228,30 @@ export class Equalizer {
     public isContextRunning(): boolean { return this.ctx.state === 'running'; }
     public async unlockAudioContext(): Promise<void> { /* ... logic as before ... */
         if (this.ctx.state === 'running') {
-            console.log("[Equalizer.unlockAudioContext] Context already running");
+
             return;
         }
-        console.log("[Equalizer.unlockAudioContext] Context state:", this.ctx.state, "- Attempting to resume...");
+
 
         // if (this.ctx.state === 'running') return;
         try {
-            console.log("[Equalizer.unlockAudioContext] Calling ctx.resume()...");
+
             await this.ctx.resume();
-            console.log("[Equalizer.unlockAudioContext] ctx.resume() succeeded. State:", this.ctx.state);
+
             await this.primeSilentBuffer();
             return;
         } catch (e) {
-            console.log("[Equalizer.unlockAudioContext] ctx.resume() failed:", e);
+
         }
 
         if (this.ctx.state === 'suspended') {
-            console.log("[Equalizer.unlockAudioContext] Context still suspended, waiting for gesture...");
+
             await new Promise<void>((resolve) => {
                 const onGesture = async () => {
-                    console.log("[Equalizer.unlockAudioContext] Gesture detected, resuming context...");
+
                     try {
                         await this.ctx.resume();
-                        console.log("[Equalizer.unlockAudioContext] Gesture resume succeeded. State:", this.ctx.state);
+
                         await this.primeSilentBuffer();
                     } catch (err) { console.warn('[Equalizer.unlockAudioContext] AudioContext resume after gesture failed:', err); } finally {
                         document.body.removeEventListener('click', onGesture);
@@ -265,10 +265,10 @@ export class Equalizer {
         }
     }
     private async primeSilentBuffer(): Promise<void> { /* ... logic as before ... */
-        console.log("[Equalizer.primeSilentBuffer] Priming silent buffer...");
+
         try {
             if (this.ctx.state !== 'running') {
-                console.log("[Equalizer.primeSilentBuffer] Context not running, resuming...");
+
                 await this.ctx.resume();
             }
         } catch (e) { /* ignore */ }
@@ -279,7 +279,7 @@ export class Equalizer {
             src.connect(this.ctx.destination);
             src.start(0);
             src.stop(0.01);
-            console.log("[Equalizer.primeSilentBuffer] Silent buffer primed successfully");
+
         } catch (e) { console.warn('[Equalizer.primeSilentBuffer] priming silent buffer failed:', e); }
     }
 
@@ -298,25 +298,25 @@ try {
             const audioBuf = await this.ctx.decodeAudioData(arrayBuf);
             this.cachedAudioBuffer = audioBuf;
 } catch (error) {
-    console.log("147",error);
+
 }
     }
 
     /** Load IR file, decode, store buffer */
     public async loadImpulseResponse(url: string) {
-        console.log("[Equalizer.loadImpulseResponse] Starting to load IR from:", url);
-        console.log("[Equalizer.loadImpulseResponse] realtimeEnabled:", this.realtimeEnabled);
+
+
         await this.unlockAudioContext();
         try {
             const resp = await fetch(url);
             if (!resp.ok) {
                 throw new Error(`IR Fetch failed with status: ${resp.status} for URL: ${url}`);
             }
-            console.log("[Equalizer.loadImpulseResponse] IR file fetched successfully");
+
             const arrayBuffer = await resp.arrayBuffer();
-            console.log("[Equalizer.loadImpulseResponse] IR arrayBuffer size:", arrayBuffer.byteLength);
+
             const buf = await this.ctx.decodeAudioData(arrayBuffer);
-            console.log("[Equalizer.loadImpulseResponse] IR decoded - Channels:", buf.numberOfChannels, "Duration:", buf.duration, "SampleRate:", buf.sampleRate);
+
             // Downmix logic (mono -> stereo, N -> stereo) as before...
             let irToUse: AudioBuffer = buf;
             const ch = buf.numberOfChannels;
@@ -345,11 +345,11 @@ try {
             }
             this.irBuffer = irToUse;
             this.convolver.buffer = irToUse;
-            console.log("[Equalizer.loadImpulseResponse] SUCCESS - IR buffer loaded and assigned to convolver");
-            console.log("[Equalizer.loadImpulseResponse] Convolver buffer is now:", this.convolver.buffer !== null ? 'SET' : 'NULL');
+
+
             // If real-time processing is enabled, reconnect the graph to include convolver
             if (this.realtimeEnabled && this.mediaSourceNode) {
-                console.log("[Equalizer.loadImpulseResponse] Real-time enabled - need to reconnect graph to include convolver");
+
                 this.reconnectAudioGraph();
             }
         } catch (err) {
@@ -361,11 +361,11 @@ try {
     /** Reconnect audio graph to include/exclude convolver after IR load */
     private reconnectAudioGraph(): void {
         if (!this.mediaSourceNode) {
-            console.log("[Equalizer.reconnectAudioGraph] No mediaSourceNode, skipping reconnect");
+
             return;
         }
 
-        console.log("[Equalizer.reconnectAudioGraph] Disconnecting old graph...");
+
         // Disconnect everything
         this.mediaSourceNode.disconnect();
         this.preamp.disconnect();
@@ -375,7 +375,7 @@ try {
         this.convolver.disconnect();
         this.gainNode!.disconnect();
 
-        console.log("[Equalizer.reconnectAudioGraph] Reconnecting with convolver...");
+
         // Reconnect with convolver in the chain
         this.mediaSourceNode.connect(this.preamp);
         this.preamp.connect(this.filters[0]);
@@ -386,7 +386,7 @@ try {
         this.filters[this.filters.length - 1].connect(this.convolver);
         this.convolver.connect(this.gainNode!);
         this.gainNode!.connect(this.ctx.destination);
-        console.log("[Equalizer.reconnectAudioGraph] Graph reconnected with convolver included");
+
     }
 
     // NOTE: enableConvolver is REMOVED/Obsolete.
@@ -401,7 +401,7 @@ try {
         }
 
         const audioBuf = this.cachedAudioBuffer;
-        console.log(":222",audioBuf);
+
         const rate = this.ctx.sampleRate; // Use hardware sample rate
         const playbackRate = this.semitonesToPlaybackRate(this.pitchSemitones);
         const newLength = Math.ceil(audioBuf.length / playbackRate);
@@ -453,7 +453,7 @@ preamp.gain.value =Math.pow(5, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20
     /** Converts the rendered AudioBuffer into a WAV Blob and sets the audio.src. */
     private async switchToProcessedAudioMode(buffer: AudioBuffer, seekTime: number = 0): Promise<void> {
         const msn = 'mediaSession' in navigator;
-        console.log("271",buffer, msn);
+
         // --- WAV Encoding Logic (As provided in previous answer) ---
         const bufferToWav = (b: AudioBuffer) => {
             const numOfChan = b.numberOfChannels, length = b.length * numOfChan * 2 + 44, buffer = new ArrayBuffer(length), view = new DataView(buffer), channels = [], sampleRate = b.sampleRate;
@@ -494,9 +494,9 @@ preamp.gain.value =Math.pow(5, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20
         this.sourceElement.currentTime = 0;
 
         // IMPORTANT: Change the source to the processed WAV file (allows background play)
-        console.log("iOS Debug: processedAudioUrl", url);
-console.log("iOS Debug: sampleRate", buffer.sampleRate);
-console.log("iOS Debug: audio element state", this.sourceElement.readyState, this.sourceElement.paused);
+
+
+
 
 if (this.isIOSorSafari()) {
     this.sourceElement.pause();
@@ -581,7 +581,7 @@ if (this.isIOSorSafari()) {
      */
     public async renderAndPlayProcessedAudio(): Promise<void> {
         if (this.realtimeEnabled) {
-            console.log("Real-time processing is enabled, skipping offline render.");
+
             // If real-time is enabled, we assume the audio is already playing through the graph.
             // Dispatch a success event as no re-processing is needed.
             try {
@@ -592,7 +592,7 @@ if (this.isIOSorSafari()) {
 
         // Ensure the audio element has its *original* source set so we can fetch it.
         // NOTE: This assumes player.ts has set the initial audio.src right before calling initEQ.
-        // console.log("311",this.sourceElement,this);
+        //
         if (!this.sourceElement.src) {
             console.warn("Audio element has no source URL.");
             return;
@@ -609,17 +609,17 @@ if (this.isIOSorSafari()) {
         }
 
         // NOTE: The UI module should probably show a loading spinner here!
-        console.log("Starting offline audio processing...");
+
 
         try {
             // 1. Render the effect chain (includes pitch and EQ settings)
             const processedBuffer = await this.renderAudioOffline();
-console.log(":424:",processedBuffer);
+
 // 2. Convert to WAV Blob and update the player source
 await this.switchToProcessedAudioMode(processedBuffer, (window as any).lastAudioTime || 0);
-// console.log(":424:",);
+//
 
-            console.log("Offline processing successful. Playing processed WAV.");
+
 
         } catch (error) {
             console.error("[EQ FATAL] Offline processing failed. Falling back to original audio source.", error);
@@ -659,8 +659,8 @@ await this.switchToProcessedAudioMode(processedBuffer, (window as any).lastAudio
         if (this.filters[idx]) {
             const oldGain = this.filters[idx].gain.value;
             this.filters[idx].gain.value = gain;
-            console.log(`[Equalizer.setBandGain] Band '${band}' (index: ${idx}) - Old gain: ${oldGain}, New gain: ${gain}, Realtime: ${this.realtimeEnabled}`);
-            console.log(`[Equalizer.setBandGain] Filter type: ${this.filters[idx].type}, Freq: ${this.filters[idx].frequency.value}Hz, Q: ${this.filters[idx].Q.value}`);
+
+
         } else {
             console.warn(`[Equalizer.setBandGain] Filter at index ${idx} not found`);
         }
@@ -689,23 +689,23 @@ await this.switchToProcessedAudioMode(processedBuffer, (window as any).lastAudio
 
     /** DEBUG: Log the current state of the audio chain */
     public debugAudioChain(): void {
-        console.log("\n=== AUDIO CHAIN DEBUG INFO ===");
-        console.log("Realtime Enabled:", this.realtimeEnabled);
-        console.log("AudioContext State:", this.ctx.state);
-        console.log("MediaSourceNode Connected:", this.mediaSourceNode !== null);
-        console.log("Gain Node Value:", this.gainNode?.gain.value);
-        console.log("Preamp Gain:", this.preamp.gain.value);
-        console.log("IR Buffer Loaded:", this.irBuffer !== null);
-        console.log("Convolver Buffer Set:", this.convolver.buffer !== null);
-        console.log("Source Element Playing:", !this.sourceElement.paused);
-        console.log("Source Element Volume:", this.sourceElement.volume);
-        console.log("Source Element Playback Rate:", this.sourceElement.playbackRate);
-        console.log("Source Element Src:", this.sourceElement.src);
-        console.log("\nFilter Gains:");
+
+
+
+
+
+
+
+
+
+
+
+
+
         this.filters.forEach((filter, idx) => {
             const bandName = Object.keys(Equalizer.bandMap).find(key => Equalizer.bandMap[key] === idx) || `Band ${idx}`;
-            console.log(`  ${bandName}: ${filter.gain.value}dB (Type: ${filter.type}, Freq: ${filter.frequency.value}Hz)`);
+
         });
-        console.log("==============================\n");
+
     }
 }
