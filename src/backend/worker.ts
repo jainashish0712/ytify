@@ -19,6 +19,7 @@ const ALLOWED_ORIGINS = [
   'https://try-this.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
+  'http://192.168.88.13:5173',
   'https://meq3d.netlify.app'
 ];
 
