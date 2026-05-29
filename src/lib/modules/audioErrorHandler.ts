@@ -36,8 +36,15 @@ export default function(
   const newSrc = audio.src.replace(url.origin, proxy);
 
   if (newSrc !== audio.src) {
-    audio.dataset.retried = 'true';
-    audio.src = newSrc;
+    if (playerStore.instances.includes(audio as HTMLAudioElement)) {
+      playerStore.instances.forEach(inst => {
+        inst.dataset.retried = 'true';
+        inst.src = newSrc;
+      });
+    } else {
+      audio.dataset.retried = 'true';
+      audio.src = newSrc;
+    }
   } else if (!prefetch) {
     setPlayerStore({
       playbackState: 'none',

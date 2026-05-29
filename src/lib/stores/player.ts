@@ -4,7 +4,8 @@ import { navStore, params, updateParam, addToQueue, queueStore, setQueueStore, s
 import { config, cssVar, themer, addToCollection, player, shuffle } from "@utils";
 import { Equalizer } from './equalizer'; // Import Equalizer
 import { irsStore } from "./irs"; // Import irsStore
-import { getIrsPath } from "@utils/irs"; // Import getIrsPath
+import { getIrsPath } from "../utils/irs";
+// import { getIrsPath } from "@utils/irs"; // Import getIrsPath
 
 export let equalizerInstance: Equalizer | null = null; // Export equalizerInstance
 
@@ -12,7 +13,9 @@ const blankImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUZCIjCB0C8AAAAASUVORK
 
 type PlayerStore = {
   stream: TrackItem & { albumId?: string },
-  audio: HTMLAudioElement,
+  instances: HTMLAudioElement[],
+  activeInstance: number,
+  get audio(): HTMLAudioElement,
   context: {
     src: Context,
     id: string
@@ -36,38 +39,46 @@ type PlayerStore = {
   lrcSync?: (d: number) => void
 };
 
-const createInitialState = (): PlayerStore => ({
-  audio: Object.assign(new Audio(), { playsinline: true, "webkit-playsinline": true }), // Modified: Adding playsinline and webkit-playsinline attributes
-  playbackState: 'none',
-  context: { id: '', src: '' },
-  status: '',
-  currentTime: 0,
-  fullDuration: 0,
-  playbackRate: 1.0,
-  loop: false,
-  volume: parseFloat(config.volume) / 100,
-  stream: {
-    title: '',
-    author: '',
-    authorId: '',
-    id: '',
-    duration: ''
-  },
-  mediaArtwork: blankImage,
-  supportsOpus: navigator.mediaCapabilities.decodingInfo({
-    type: 'file',
-    audio: {
-      contentType: 'audio/webm;codecs=opus'
-    }
-  }).then(res => res.supported),
-  data: {},
-  immersive: false,
-  isMusic: true,
-  audioURL: '',
-  videoURL: '',
-  isWatching: Boolean(config.watchMode),
-  proxy: ''
-});
+const createInitialState = (): PlayerStore => {
+  const instances = [
+    Object.assign(new Audio(), { playsinline: true, "webkit-playsinline": true, crossOrigin: 'anonymous' }),
+    Object.assign(new Audio(), { playsinline: true, "webkit-playsinline": true, crossOrigin: 'anonymous' })
+  ];
+  return {
+    instances,
+    activeInstance: 0,
+    get audio() { return this.instances[this.activeInstance] },
+    playbackState: 'none',
+    context: { id: '', src: '' },
+    status: '',
+    currentTime: 0,
+    fullDuration: 0,
+    playbackRate: 1.0,
+    loop: false,
+    volume: parseFloat(config.volume) / 100,
+    stream: {
+      title: '',
+      author: '',
+      authorId: '',
+      id: '',
+      duration: ''
+    },
+    mediaArtwork: blankImage,
+    supportsOpus: navigator.mediaCapabilities.decodingInfo({
+      type: 'file',
+      audio: {
+        contentType: 'audio/webm;codecs=opus'
+      }
+    }).then(res => res.supported),
+    data: {},
+    immersive: false,
+    isMusic: true,
+    audioURL: '',
+    videoURL: '',
+    isWatching: Boolean(config.watchMode),
+    proxy: ''
+  };
+};
 
 export const [playerStore, setPlayerStore] = createStore(createInitialState());
 
@@ -131,7 +142,7 @@ createRoot(() => {
   });
 
   // Instantiate Equalizer
-  equalizerInstance = new Equalizer(playerStore.audio);
+  equalizerInstance = new Equalizer(playerStore.instances[0]);
 
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
@@ -208,57 +219,198 @@ createRoot(() => {
   console.log("[player.ts]   window.debugAudioChain() - Check audio chain status");
 
 
-  playerStore.audio.onended = () => {
-    if (queueStore.list.length)
-      playNext();
-    else {
-      updateParam('s');
-      setPlayerStore('playbackState', 'none');
+  playerStore.instances.forEach((instance, index) => {
+
+    instance.onended = () => {
+      if (index !== playerStore.activeInstance) return;
+      if (queueStore.list.length)
+        playNext();
+      else {
+        updateParam('s');
+        setPlayerStore('playbackState', 'none');
+        if ('mediaSession' in navigator)
+          import('@modules/mediaSession').then(m => m.updateMediaSessionPlaybackState('none'));
+      }
+    }
+
+    instance.onplaying = () => {
+      if (index !== playerStore.activeInstance) return;
+      setPlayerStore('playbackState', 'playing');
+      if (!isIOS) {
+          equalizerInstance?.resumeContext();
+      }
       if ('mediaSession' in navigator)
-        import('@modules/mediaSession').then(m => m.updateMediaSessionPlaybackState('none'));
+        import('@modules/mediaSession').then(m => {
+          m.updateMediaSessionPlaybackState('playing');
+          m.updateMediaSessionPosition();
+        });
+
+      const { stream } = playerStore;
+      const { id } = stream;
+
+      if (config.history)
+        historyTimeoutId = window.setTimeout(() => {
+          if (historyID === id) {
+            if (
+              config.similarContent
+              && playerStore.isMusic
+            )
+              getRecommendations();
+            addToCollection('history', [playerStore.stream]);
+          }
+        }, 1e4);
     }
-  }
 
-  playerStore.audio.onplaying = () => {
-    setPlayerStore('playbackState', 'playing');
-    if (!isIOS) {
-        equalizerInstance?.resumeContext();
-    }
-    if ('mediaSession' in navigator)
-      import('@modules/mediaSession').then(m => {
-        m.updateMediaSessionPlaybackState('playing');
-        m.updateMediaSessionPosition();
-      });
+    instance.onpause = () => {
+      if (index !== playerStore.activeInstance) return;
+      setPlayerStore('playbackState', 'paused');
+      if (!isIOS) {
+          equalizerInstance?.suspendContext();
+      }
+      if ('mediaSession' in navigator)
+        import('@modules/mediaSession').then(m => {
+          m.updateMediaSessionPlaybackState('paused');
+          m.updateMediaSessionPosition();
+        });
+      clearTimeout(historyTimeoutId);
+    };
+    instance.addEventListener('loadeddata', themer);
 
-    const { stream } = playerStore;
-    const { id } = stream;
+    instance.onloadstart = () => {
+      const isBlob = instance.src.startsWith('blob:');
 
-    if (config.history)
-      historyTimeoutId = window.setTimeout(() => {
-        if (historyID === id) {
-          if (
-            config.similarContent
-            && playerStore.isMusic
-          )
-            getRecommendations();
-          addToCollection('history', [playerStore.stream]);
+      if (index === playerStore.activeInstance) {
+        setPlayerStore('playbackState', isBlob ? playerStore.playbackState : 'paused');
+        setPlayerStore('status', '');
+
+        // Reset equalizer state for the new track (clears cached buffers)
+        // Pass the new src to avoid resetting if it's our own processed blob
+        equalizerInstance?.reset(instance.src);
+      }
+
+      let isPlayable = false;
+      if (queueStore.history.length || params.has('url') || params.has('text') || !params.has('s')) {
+        isPlayable = true;
+      }
+
+      if (isPlayable && index === playerStore.activeInstance) {
+        if (isIOS && !isBlob) {
+          // On iOS, don't play the raw source. Wait for onloadedmetadata -> renderAndPlayProcessedAudio.
+          console.log("[player.ts] onloadstart (iOS) - suppressing raw playback, waiting for render.");
+          setPlayerStore('playbackState', 'loading');
+        } else {
+          instance.play();
         }
-      }, 1e4);
-  }
+      }
 
-  playerStore.audio.onpause = () => {
-    setPlayerStore('playbackState', 'paused');
-    if (!isIOS) {
-        equalizerInstance?.suspendContext();
+      if (index === playerStore.activeInstance) {
+        historyID = playerStore.stream.id;
+        clearTimeout(historyTimeoutId);
+        instance.playbackRate = playerStore.playbackRate;
+      }
     }
-    if ('mediaSession' in navigator)
-      import('@modules/mediaSession').then(m => {
-        m.updateMediaSessionPlaybackState('paused');
-        m.updateMediaSessionPosition();
+
+    instance.onwaiting = () => {
+      if (index !== playerStore.activeInstance) return;
+      setPlayerStore('playbackState', 'loading')
+    };
+
+    let lastMediaSessionUpdate = 0;
+
+    instance.ontimeupdate = () => {
+      if (index !== playerStore.activeInstance) return;
+      if (document.activeElement?.matches('input[type="range"]'))
+        return;
+
+      const { lrcSync, fullDuration, isMusic } = playerStore;
+
+      // Lyrics
+      if (lrcSync)
+        lrcSync(instance.currentTime);
+
+      const seconds = Math.floor(instance.currentTime);
+
+
+      setPlayerStore('currentTime', seconds);
+
+      // Update MediaSession position (throttled to every 2 seconds)
+      const now = Date.now();
+      if (now - lastMediaSessionUpdate > 2000) {
+          lastMediaSessionUpdate = now;
+          if ('mediaSession' in navigator) {
+              import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
+          }
+      }
+
+
+      // Immersive Mode
+      const { ref } = navStore.player;
+      if (ref) {
+        const { offsetHeight, offsetWidth } = ref;
+        const diff = isMusic ? (offsetHeight - offsetWidth) : offsetWidth;
+        const scale = seconds / fullDuration;
+        const shift = Math.floor(scale * diff);
+        // cssVar('--player-bp', `-${shift}px 0`);
+      }
+
+      const t = params.get('t');
+
+      if (t) {
+        if (isMusic) updateParam('t');
+        else {
+          if (seconds % 5 === 0) {
+            const str = seconds.toString();
+            if (t !== str)
+              updateParam('t', str);
+          }
+        }
+      }
+
+
+    }
+
+    instance.onloadedmetadata = () => {
+      if (index !== playerStore.activeInstance) return;
+      setPlayerStore({
+        currentTime: 0,
+        fullDuration: Math.floor(instance.duration)
       });
-    clearTimeout(historyTimeoutId);
-  };
-  playerStore.audio.addEventListener('loadeddata', themer);
+
+      if ('mediaSession' in navigator)
+        import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
+
+      if (isIOS) {
+        console.log("[player.ts] onloadedmetadata (iOS) - triggering offline render for background play");
+        equalizerInstance?.renderAndPlayProcessedAudio();
+      }
+    }
+
+    instance.oncanplaythrough = async function() {
+      if (index !== playerStore.activeInstance) return;
+      const nextItem = config.queuePrefetch && queueStore.list[0]?.id;
+
+      if (!nextItem) return;
+
+      const data = await import('@modules/getStreamData').then(mod => mod.default(nextItem, true));
+      const prefetchRef = new Audio();
+      prefetchRef.onerror = () =>
+        import('@modules/audioErrorHandler').then(mod => mod.default(prefetchRef, nextItem));
+      if (data && 'adaptiveFormats' in data)
+        import('../modules/setAudioStreams')
+          .then(mod => mod.default(
+            data.adaptiveFormats
+              .filter(f => f.type.startsWith('audio'))
+              .sort((a, b) => (parseInt(a.bitrate) - parseInt(b.bitrate))),
+            prefetchRef
+          ));
+    }
+
+    instance.onerror = () => {
+      if (index !== playerStore.activeInstance) return;
+      import('@modules/audioErrorHandler').then(mod => mod.default(instance));
+    }
+
+  });
 
 
   let isPlayable = false;
@@ -269,125 +421,8 @@ createRoot(() => {
     }
   }, 500);
 
-  playerStore.audio.onloadstart = () => {
-    const isBlob = playerStore.audio.src.startsWith('blob:');
-
-    setPlayerStore('playbackState', isBlob ? playerStore.playbackState : 'paused');
-    setPlayerStore('status', '');
-
-    // Reset equalizer state for the new track (clears cached buffers)
-    // Pass the new src to avoid resetting if it's our own processed blob
-    equalizerInstance?.reset(playerStore.audio.src);
-
-    if (isPlayable) {
-      if (isIOS && !isBlob) {
-        // On iOS, don't play the raw source. Wait for onloadedmetadata -> renderAndPlayProcessedAudio.
-        console.log("[player.ts] onloadstart (iOS) - suppressing raw playback, waiting for render.");
-        setPlayerStore('playbackState', 'loading');
-      } else {
-        playerStore.audio.play();
-      }
-    }
-
-    historyID = playerStore.stream.id;
-    clearTimeout(historyTimeoutId);
-    playerStore.audio.playbackRate = playerStore.playbackRate;
-  }
-
-  playerStore.audio.onwaiting = () => {
-    setPlayerStore('playbackState', 'loading')
-  };
-
-  let lastMediaSessionUpdate = 0;
-
-  playerStore.audio.ontimeupdate = () => {
-    if (document.activeElement?.matches('input[type="range"]'))
-      return;
-
-    const { audio, lrcSync, fullDuration, isMusic } = playerStore;
-
-    // Lyrics
-    if (lrcSync)
-      lrcSync(audio.currentTime);
-
-    const seconds = Math.floor(audio.currentTime);
-
-
-    setPlayerStore('currentTime', seconds);
-
-    // Update MediaSession position (throttled to every 2 seconds)
-    const now = Date.now();
-    if (now - lastMediaSessionUpdate > 2000) {
-        lastMediaSessionUpdate = now;
-        if ('mediaSession' in navigator) {
-            import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
-        }
-    }
-
-
-    // Immersive Mode
-    const { ref } = navStore.player;
-    if (ref) {
-      const { offsetHeight, offsetWidth } = ref;
-      const diff = isMusic ? (offsetHeight - offsetWidth) : offsetWidth;
-      const scale = seconds / fullDuration;
-      const shift = Math.floor(scale * diff);
-      // cssVar('--player-bp', `-${shift}px 0`);
-    }
-
-    const t = params.get('t');
-
-    if (t) {
-      if (isMusic) updateParam('t');
-      else {
-        if (seconds % 5 === 0) {
-          const str = seconds.toString();
-          if (t !== str)
-            updateParam('t', str);
-        }
-      }
-    }
-
-
-  }
-
-  playerStore.audio.onloadedmetadata = () => {
-    setPlayerStore({
-      currentTime: 0,
-      fullDuration: Math.floor(playerStore.audio.duration)
-    });
-
-    if ('mediaSession' in navigator)
-      import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
-
-    if (isIOS) {
-      console.log("[player.ts] onloadedmetadata (iOS) - triggering offline render for background play");
-      equalizerInstance?.renderAndPlayProcessedAudio();
-    }
-  }
-
-  playerStore.audio.oncanplaythrough = async function() {
-    const nextItem = config.queuePrefetch && queueStore.list[0]?.id;
-
-    if (!nextItem) return;
-
-    const data = await import('@modules/getStreamData').then(mod => mod.default(nextItem, true));
-    const prefetchRef = new Audio();
-    prefetchRef.onerror = () =>
-      import('@modules/audioErrorHandler').then(mod => mod.default(prefetchRef, nextItem));
-    if (data && 'adaptiveFormats' in data)
-      import('../modules/setAudioStreams')
-        .then(mod => mod.default(
-          data.adaptiveFormats
-            .filter(f => f.type.startsWith('audio'))
-            .sort((a, b) => (parseInt(a.bitrate) - parseInt(b.bitrate))),
-          prefetchRef
-        ));
-  }
-
-  playerStore.audio.onerror = () => import('@modules/audioErrorHandler').then(mod => mod.default(playerStore.audio));
-
 });
+
 
 async function getRecommendations() {
 

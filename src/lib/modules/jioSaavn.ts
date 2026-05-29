@@ -31,9 +31,25 @@ export default function() {
       import('../modules/setMetadata')
         .then(mod => mod.default(stream));
 
+      setPlayerStore('status', 'Separating Vocals & Instrumental...');
+      import('./audioSeparator').then(async ({ separateAudio }) => {
+        try {
+            const { vocals, instrumental } = await separateAudio(fullDownloadUrl);
+            
+            playerStore.instances[0].src = vocals;
+            playerStore.instances[1].src = instrumental;
 
-      delete audio.dataset.retried;
-      audio.src = fullDownloadUrl;
+            playerStore.instances.forEach(inst => delete inst.dataset.retried);
+            setPlayerStore('status', '');
+        } catch (e) {
+            console.error('Demucs separation failed:', e);
+            setPlayerStore('status', 'Separation failed, falling back...');
+            playerStore.instances.forEach(inst => {
+                delete inst.dataset.retried;
+                inst.src = fullDownloadUrl;
+            });
+        }
+      });
       updateParam('s', id);
 
     })

@@ -1,6 +1,7 @@
 // src/lib/stores/irs.ts
 import { createStore } from "solid-js/store";
-import { IRS_OPTIONS } from '@utils/irs';
+import { IRS_OPTIONS } from "../utils/irs";
+// import { IRS_OPTIONS } from '@utils/irs';
 
 type IrsStore = {
   selectedCategory: string;

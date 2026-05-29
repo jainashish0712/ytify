@@ -20,6 +20,8 @@ export class Equalizer {
 
     private pitchSemitones: number = 2.41; // Using your configured default
 
+    private sourceNodes: Map<HTMLAudioElement, MediaElementAudioSourceNode> = new Map();
+
     constructor(audio: HTMLAudioElement) {
         console.log("[Equalizer Constructor] === INITIALIZING EQUALIZER ===");
         this.sourceElement = audio;
@@ -72,13 +74,40 @@ export class Equalizer {
         this.gainNode = this.ctx.createGain(); // Initialize the gainNode
         console.log("[Equalizer Constructor] gainNode.gain.value (initial):", this.gainNode.gain.value);
 
-        // REMOVED: This listener caused issues on iOS by auto-resuming after pause.
-        // audio.addEventListener('play', () => {
-        //     console.log("[Equalizer] Audio play event detected - _unlockAudioContext...");
-        //     this._unlockAudioContext();
-        // });
-
         console.log("[Equalizer Constructor] === EQUALIZER INITIALIZATION COMPLETE ===");
+    }
+
+    public updateSource(audio: HTMLAudioElement): void {
+        if (this.sourceElement === audio) return;
+        console.log("[Equalizer] Updating source element...");
+        
+        const wasPlaying = !this.sourceElement.paused;
+        const currentTime = this.sourceElement.currentTime;
+
+        if (this.realtimeEnabled && this.mediaSourceNode) {
+            console.log("[Equalizer] Disconnecting old source node...");
+            this.mediaSourceNode.disconnect();
+        }
+
+        this.sourceElement = audio;
+        try {
+            this.sourceElement.crossOrigin = 'anonymous';
+        } catch (e) {
+            // ignore
+        }
+
+        if (this.realtimeEnabled) {
+            console.log("[Equalizer] Connecting new source node...");
+            let node = this.sourceNodes.get(audio);
+            if (!node) {
+                node = this.ctx.createMediaElementSource(audio);
+                this.sourceNodes.set(audio, node);
+            }
+            this.mediaSourceNode = node;
+            this.mediaSourceNode.connect(this.preamp);
+        }
+        
+        console.log("[Equalizer] Source element updated.");
     }
 
     /** Setup automatic AudioContext _unlockAudioContext on first user gesture or audio play */
@@ -178,7 +207,8 @@ export class Equalizer {
                 console.log("[Equalizer.enableRealtimeProcessing] Creating mediaSourceNode...");
                 // IMPORTANT: Create mediaSourceNode BEFORE muting to ensure proper capture
                 this.mediaSourceNode = this.ctx.createMediaElementSource(this.sourceElement);
-                console.log("[Equalizer.enableRealtimeProcessing] mediaSourceNode created");
+                this.sourceNodes.set(this.sourceElement, this.mediaSourceNode);
+                console.log("[Equalizer.enableRealtimeProcessing] mediaSourceNode created and cached");
 
                 // Connect the graph immediately after creating mediaSourceNode
                 console.log("[Equalizer.enableRealtimeProcessing] Connecting audio graph...");

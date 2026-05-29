@@ -3,10 +3,12 @@ import './Player.css'
 import { MediaDetails } from "@components/MediaPartials";
 import { config, cssVar } from "@utils";
 import { closeFeature, playerStore, setNavStore, setStore, t, updateParam } from "@stores";
-import { IRS_OPTIONS, getIrsPath } from "@utils/irs";
-import { irsStore, setIrsStore, updateSelectedIrsCategory, updateSelectedIrsFile } from "@stores/irs";
+// import { IRS_OPTIONS, getIrsPath } from "@utils/irs";
+// import { irsStore, setIrsStore, updateSelectedIrsCategory, updateSelectedIrsFile } from "@stores/irs";
 
 import MediaArtwork from '../../components/MediaPartials/MediaArtwork'
+import { irsStore } from "../../lib/stores/irs";
+import { IRS_OPTIONS } from "../../lib/utils/irs";
 // const MediaArtwork = lazy(() => import('../../components/MediaPartials/MediaArtwork'));
 const Lyrics = lazy(() => import('./Lyrics'));
 const Video = lazy(() => import('./Video'));

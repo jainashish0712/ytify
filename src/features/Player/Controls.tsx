@@ -2,7 +2,7 @@ import { LikeButton, PlayButton, PlayNextButton } from "@components/MediaPartial
 import { params, playerStore, playPrev, queueStore, setPlayerStore, updateParam, t } from "@stores";
 import { equalizerInstance } from '../../lib/stores/player'; // Direct relative import
 import { convertSStoHHMMSS, setConfig } from "@utils";
-import { Accessor, createSignal, onMount, Setter, Show } from "solid-js";
+import { Accessor, createSignal, onMount, Setter, Show, For } from "solid-js";
 
 export default function(_: {
   showLyrics: Accessor<boolean>,
@@ -10,12 +10,14 @@ export default function(_: {
 }) {
 
   const [isPointed, setPointed] = createSignal(params.has('t'));
-  let slider!: HTMLInputElement;
-
+  let sliders: HTMLInputElement[] = [];
 
   onMount(() => {
-    ['touchstart', 'touchmove', 'touchend'].forEach(type => {
-      slider.addEventListener(type, (e) => e.stopPropagation());
+    sliders.forEach(slider => {
+      if (!slider) return;
+      ['touchstart', 'touchmove', 'touchend'].forEach(type => {
+        slider.addEventListener(type, (e) => e.stopPropagation());
+      });
     });
   })
 
@@ -24,23 +26,58 @@ export default function(_: {
       import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
   }
 
+  function switchInstance(index: number) {
+    if (playerStore.activeInstance === index) return;
+    
+    const current = playerStore.audio;
+    const next = playerStore.instances[index];
+    const wasPlaying = !current.paused;
+    const currentTime = current.currentTime;
+
+    current.pause();
+    next.currentTime = currentTime;
+    
+    setPlayerStore('activeInstance', index);
+
+    if (equalizerInstance) {
+      equalizerInstance.updateSource(next);
+    }
+
+    if (wasPlaying) {
+      next.play();
+    }
+  }
+
   return (
     <>
-      <span class="slider">
-        <input
-          type="range"
-          value={playerStore.currentTime}
-          max={playerStore.fullDuration}
-          ref={slider}
-          onchange={(e) => {
-            playerStore.audio.currentTime = parseInt(e.target.value);
-          }}
-        />
-        <div>
-          <p id="currentDuration">{convertSStoHHMMSS(playerStore.currentTime)}</p>
-          <p id="fullDuration">{convertSStoHHMMSS(playerStore.fullDuration)}</p>
-        </div>
-      </span>
+      <For each={playerStore.instances}>
+        {(instance, index) => (
+          <div class="slider-container" style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <input
+              type="checkbox"
+              style="width: 20px; height: 20px; cursor: pointer;"
+              checked={playerStore.activeInstance === index()}
+              onchange={() => switchInstance(index())}
+            />
+            <span class="slider" style="flex-grow: 1;">
+              <input
+                type="range"
+                value={playerStore.currentTime}
+                max={playerStore.fullDuration}
+                ref={el => sliders[index()] = el}
+                onchange={(e) => {
+                  const val = parseInt(e.target.value);
+                  playerStore.instances.forEach(inst => inst.currentTime = val);
+                }}
+              />
+              <div>
+                <p id="currentDuration">{convertSStoHHMMSS(playerStore.currentTime)}</p>
+                <p id="fullDuration">{convertSStoHHMMSS(playerStore.fullDuration)}</p>
+              </div>
+            </span>
+          </div>
+        )}
+      </For>
 
       <div class="mainShelf">
 
