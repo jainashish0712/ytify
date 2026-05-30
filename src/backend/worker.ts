@@ -44,14 +44,6 @@ export default {
       'Access-Control-Max-Age': '86400',
       'Vary': 'Origin'
     };
-    // const corsHeaders = {
-    //   'Access-Control-Allow-Origin': "*",
-    //   // 'Access-Control-Allow-Origin': allowedOrigin,
-    //   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    //   'Access-Control-Allow-Headers': 'Content-Type',
-    //   'Access-Control-Max-Age': '86400',
-    //   'Vary': 'Origin'
-    // };
 
     if (request.method === 'OPTIONS') {
       return new Response(null, {
@@ -125,6 +117,85 @@ export default {
           if (!id) throw new Error('Missing id parameter');
           data = await getSubFeed(id.split(','));
           break;
+        }
+        case 'proxy': {
+          const streamUrl = searchParams.get('url');
+          if (!streamUrl) throw new Error('Missing url parameter');
+
+          if (typeof process !== 'undefined' && process.versions?.node) {
+            const { spawn } = await import('node:child_process');
+            const { join } = await import('node:path');
+            const { existsSync } = await import('node:fs');
+
+            const irsPath = join(process.cwd(), 'public/irs/testeqapo3 - Copy.wav');
+            
+            if (!existsSync(irsPath)) {
+              console.error(`[Proxy] IRS file NOT found at: ${irsPath}`);
+            }
+
+            const ffmpeg = spawn('ffmpeg', [
+              '-hide_banner',
+              '-loglevel', 'error',
+              '-user_agent', request.headers.get('User-Agent') || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              '-i', streamUrl,
+              '-i', irsPath,
+              '-filter_complex',
+              '[0:a]equalizer=f=40:t=o:w=1:g=4,equalizer=f=150:t=o:w=1:g=5,equalizer=f=400:t=o:w=1:g=4,equalizer=f=1000:t=o:w=1:g=4,equalizer=f=2000:t=o:w=1:g=4,equalizer=f=4000:t=o:w=1:g=4,equalizer=f=8000:t=o:w=1:g=1,equalizer=f=16000:t=o:w=1:g=-1,asetrate=44100*1.2676,aresample=44100[eq];[eq][1:a]afir',
+              '-c:a', 'libmp3lame',
+              '-q:a', '2',
+              '-f', 'mp3',
+              'pipe:1'
+            ]);
+
+            const stream = new ReadableStream({
+              start(controller) {
+                console.log(`[Proxy] Starting FFmpeg stream for: ${streamUrl}`);
+                ffmpeg.stdout.on('data', (chunk) => {
+                  controller.enqueue(new Uint8Array(chunk));
+                });
+                ffmpeg.stdout.on('end', () => {
+                  console.log('[Proxy] FFmpeg stream ended.');
+                  controller.close();
+                });
+                ffmpeg.stderr.on('data', (data) => {
+                  const msg = data.toString();
+                  if (msg.includes('Error') || msg.includes('failed')) {
+                    console.error(`[FFmpeg Error] ${msg}`);
+                  } else {
+                    console.log(`[FFmpeg] ${msg.trim()}`);
+                  }
+                });
+                ffmpeg.on('error', (err) => {
+                  console.error(`[Proxy] FFmpeg Spawn Error: ${err}`);
+                  controller.error(err);
+                });
+                ffmpeg.on('close', (code) => {
+                  if (code !== 0 && code !== null) {
+                    console.error(`[Proxy] FFmpeg process exited with code ${code}`);
+                  }
+                });
+              },
+              cancel() {
+                console.log('[Proxy] Client cancelled stream, killing FFmpeg.');
+                ffmpeg.kill();
+              }
+            });
+
+            return new Response(stream, {
+              status: 200,
+              headers: {
+                ...corsHeaders,
+                'Content-Type': 'audio/mpeg',
+                'Accept-Ranges': 'none'
+              }
+            });
+          } else {
+            const res = await fetch(streamUrl);
+            return new Response(res.body, {
+              status: res.status,
+              headers: { ...corsHeaders, 'Content-Type': res.headers.get('Content-Type') || 'audio/mpeg' }
+            });
+          }
         }
         default:
           return new Response(JSON.stringify({ error: 'Not Found' }), {

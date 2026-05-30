@@ -33,14 +33,28 @@ export function createLocalAdapter() {
 
       // Stream the response body back to the client
       if (response.body) {
+        // Use the native reader if available
         const reader = response.body.getReader();
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          res.write(value);
-        }
+        const pump = async () => {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) {
+                res.end();
+                break;
+              }
+              // Ensure we are sending a Buffer or Uint8Array
+              res.write(Buffer.from(value));
+            }
+          } catch (err) {
+            console.error('[Adapter] Stream pump error:', err);
+            if (!res.writableEnded) res.destroy();
+          }
+        };
+        pump();
+      } else {
+        res.end();
       }
-      res.end();
     } catch (err) {
       console.error('Local Worker Error:', err);
       if (!res.headersSent) {

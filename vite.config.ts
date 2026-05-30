@@ -26,7 +26,7 @@ export default defineConfig(({ command }) => ({
   },
   plugins: [
     solidPlugin(),
-    injectEruda(command === 'serve'),
+    // injectEruda(command === 'serve'),
     apiMiddleware(command === 'serve'),
     VitePWA({
       manifest: {

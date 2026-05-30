@@ -35,6 +35,7 @@ export default async function(data: TrackItem) {
       { src: img, sizes: '256x256' },
       { src: img, sizes: '384x384' },
       { src: img, sizes: '512x512' },
+      { src: img, sizes: '1080x1080' },
     ]
   }
 

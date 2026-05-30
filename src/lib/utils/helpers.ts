@@ -54,6 +54,12 @@ export function proxyHandler(
   url: string,
   prefetch?: boolean
 ) {
+  if (url.includes('&fallback')) return url;
+
+  if (import.meta.env.DEV) {
+    return `/api/proxy?url=${encodeURIComponent(url)}`;
+  }
+
   const isVideo = Boolean(document.querySelector('video'));
   const useProxy = playerStore.stream.author?.endsWith('- Topic') && !isVideo;
 
@@ -64,7 +70,7 @@ export function proxyHandler(
   const origin = link.origin;
   const proxy = playerStore.proxy;
 
-  return useProxy && proxy && !url.includes('&fallback') ?
+  return useProxy && proxy ?
     url.replace(origin, proxy) : url;
 }
 

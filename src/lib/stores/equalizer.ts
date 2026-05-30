@@ -18,7 +18,7 @@ export class Equalizer {
     private mediaSourceNode: MediaElementAudioSourceNode | null = null;
     public gainNode: GainNode | null = null; // Made public
 
-    private pitchSemitones: number = 2.41; // Using your configured default
+    private pitchSemitones: number = 0.41; // Using your configured default
 
     constructor(audio: HTMLAudioElement) {
         console.log("[Equalizer Constructor] === INITIALIZING EQUALIZER ===");
@@ -66,7 +66,7 @@ export class Equalizer {
 
         this.convolver = this.ctx.createConvolver();
         this.preamp = this.ctx.createGain();
-        this.preamp.gain.value = 1; // Changed from 5 to 1 for debugging
+        this.preamp.gain.value = 5; // Changed from 5 to 1 for debugging
         console.log("[Equalizer Constructor] preamp.gain.value:", this.preamp.gain.value);
 
         this.gainNode = this.ctx.createGain(); // Initialize the gainNode

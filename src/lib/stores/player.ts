@@ -124,26 +124,30 @@ createRoot(() => {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       console.log("[player.ts] Document visible - attempting to resume AudioContext");
-      equalizerInstance?.resumeContext();
+      if (equalizerInstance) equalizerInstance.resumeContext();
     } else {
       console.log("[player.ts] Document hidden - AudioContext might be suspended by OS");
     }
   });
 
   // Instantiate Equalizer
-  equalizerInstance = new Equalizer(playerStore.audio);
+  if (!import.meta.env.DEV) {
+    equalizerInstance = new Equalizer(playerStore.audio);
+  }
 
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-  if (isIOS) {
-    console.log("[player.ts] iOS/Safari detected - using offline rendering for background play compatibility");
-    equalizerInstance.enableRealtimeProcessing(false);
-  } else {
-    // Enable real-time processing for other platforms - this will handle context unlocking automatically
-    equalizerInstance.enableRealtimeProcessing(true);
-  }
+  if (equalizerInstance) {
+    if (isIOS) {
+      console.log("[player.ts] iOS/Safari detected - using offline rendering for background play compatibility");
+      equalizerInstance.enableRealtimeProcessing(false);
+    } else {
+      // Enable real-time processing for other platforms - this will handle context unlocking automatically
+      equalizerInstance.enableRealtimeProcessing(true);
+    }
 
-  equalizerInstance.debugAudioChain();
+    equalizerInstance.debugAudioChain();
+  }
 
   // Set initial volume on the equalizer's gain node
   if (equalizerInstance && equalizerInstance.gainNode) {
@@ -154,14 +158,14 @@ createRoot(() => {
   // Initialize equalizer band gains with preset settings
   if (equalizerInstance) {
     console.log("[player.ts] === INITIALIZING EQUALIZER BANDS ===");
-    equalizerInstance.setBandGain('lowshelf', 0);    // neutral lowshelf (40Hz)
-    equalizerInstance.setBandGain('lowMid', 1);      // slight boost low-mid (150Hz)
-    equalizerInstance.setBandGain('midLow', 0);      // neutral mid-low (400Hz)
-    equalizerInstance.setBandGain('mid', 0);         // neutral mid (1000Hz)
-    equalizerInstance.setBandGain('midHigh', 0);     // neutral mid-high (2000Hz)
-    equalizerInstance.setBandGain('highMid', 0);     // neutral high-mid (4000Hz)
-    equalizerInstance.setBandGain('high', -3);       // slight cut high (8000Hz)
-    equalizerInstance.setBandGain('highshelf', -5);  // cut highshelf (16000Hz)
+    equalizerInstance.setBandGain('lowshelf', 4);    // neutral lowshelf (40Hz)
+    equalizerInstance.setBandGain('lowMid', 5);      // slight boost low-mid (150Hz)
+    equalizerInstance.setBandGain('midLow', 4);      // neutral mid-low (400Hz)
+    equalizerInstance.setBandGain('mid', 4);         // neutral mid (1000Hz)
+    equalizerInstance.setBandGain('midHigh', 4);     // neutral mid-high (2000Hz)
+    equalizerInstance.setBandGain('highMid', 4);     // neutral high-mid (4000Hz)
+    equalizerInstance.setBandGain('high', 1);       // slight cut high (8000Hz)
+    equalizerInstance.setBandGain('highshelf', -1);  // cut highshelf (16000Hz)
     equalizerInstance.setPitch(0.41);
     console.log("[player.ts] playerStore.audio.playbackRate after setPitch:", playerStore.audio.playbackRate);
     console.log("[player.ts] === EQUALIZER BANDS INITIALIZED ===");
@@ -182,7 +186,7 @@ createRoot(() => {
           console.log("[player.ts] IR is now active in the audio chain");
           equalizerInstance.debugAudioChain();
           if (isIOS && playerStore.playbackState === 'playing') {
-             equalizerInstance?.renderAndPlayProcessedAudio();
+             if (equalizerInstance) equalizerInstance.renderAndPlayProcessedAudio();
           }
         })
         .catch(e => {
@@ -222,7 +226,7 @@ createRoot(() => {
   playerStore.audio.onplaying = () => {
     setPlayerStore('playbackState', 'playing');
     if (!isIOS) {
-        equalizerInstance?.resumeContext();
+        if (equalizerInstance) equalizerInstance.resumeContext();
     }
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => {
@@ -249,7 +253,7 @@ createRoot(() => {
   playerStore.audio.onpause = () => {
     setPlayerStore('playbackState', 'paused');
     if (!isIOS) {
-        equalizerInstance?.suspendContext();
+        if (equalizerInstance) equalizerInstance.suspendContext();
     }
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => {
@@ -277,7 +281,7 @@ createRoot(() => {
 
     // Reset equalizer state for the new track (clears cached buffers)
     // Pass the new src to avoid resetting if it's our own processed blob
-    equalizerInstance?.reset(playerStore.audio.src);
+    if (equalizerInstance) equalizerInstance.reset(playerStore.audio.src);
 
     if (isPlayable) {
       if (isIOS && !isBlob) {
@@ -362,7 +366,7 @@ createRoot(() => {
 
     if (isIOS) {
       console.log("[player.ts] onloadedmetadata (iOS) - triggering offline render for background play");
-      equalizerInstance?.renderAndPlayProcessedAudio();
+      if (equalizerInstance) equalizerInstance.renderAndPlayProcessedAudio();
     }
   }
 
