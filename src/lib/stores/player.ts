@@ -154,15 +154,15 @@ createRoot(() => {
   // Initialize equalizer band gains with preset settings
   if (equalizerInstance) {
     console.log("[player.ts] === INITIALIZING EQUALIZER BANDS ===");
-    equalizerInstance.setBandGain('lowshelf', 0);    // neutral lowshelf (40Hz)
-    equalizerInstance.setBandGain('lowMid', 1);      // slight boost low-mid (150Hz)
-    equalizerInstance.setBandGain('midLow', 0);      // neutral mid-low (400Hz)
-    equalizerInstance.setBandGain('mid', 0);         // neutral mid (1000Hz)
-    equalizerInstance.setBandGain('midHigh', 0);     // neutral mid-high (2000Hz)
-    equalizerInstance.setBandGain('highMid', 0);     // neutral high-mid (4000Hz)
-    equalizerInstance.setBandGain('high', -3);       // slight cut high (8000Hz)
-    equalizerInstance.setBandGain('highshelf', -5);  // cut highshelf (16000Hz)
-    equalizerInstance.setPitch(0.41);
+    equalizerInstance.setBandGain('lowshelf', 2);    // neutral lowshelf (40Hz)
+    equalizerInstance.setBandGain('lowMid', 3);      // slight boost low-mid (150Hz)
+    equalizerInstance.setBandGain('midLow', 2);      // neutral mid-low (400Hz)
+    equalizerInstance.setBandGain('mid', 2);         // neutral mid (1000Hz)
+    equalizerInstance.setBandGain('midHigh', 2);     // neutral mid-high (2000Hz)
+    equalizerInstance.setBandGain('highMid', 2);     // neutral high-mid (4000Hz)
+    equalizerInstance.setBandGain('high', -1);       // slight cut high (8000Hz)
+    equalizerInstance.setBandGain('highshelf', -3);  // cut highshelf (16000Hz)
+    // equalizerInstance.setPitch(0.41);
     console.log("[player.ts] playerStore.audio.playbackRate after setPitch:", playerStore.audio.playbackRate);
     console.log("[player.ts] === EQUALIZER BANDS INITIALIZED ===");
   }
