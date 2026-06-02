@@ -70,6 +70,7 @@ export class Demucs extends EventEmitter {
                     break;
                 case 'WASM_ERROR':
                     console.error("Error executing WASM");
+                    this.dispatchEvent(new ErrorEvent('error', { message: 'WASM_ERROR' }));
                     break;
                 case 'WASM_LOG':
                     this.dispatchEvent(new LogEvent(e.data.data));
@@ -78,6 +79,9 @@ export class Demucs extends EventEmitter {
         };
         this.init(selectedModel).then(() => {
             this.dispatchEvent(new Event('ready'));
+        }).catch((err) => {
+            console.error('Demucs initialization failed:', err);
+            this.dispatchEvent(new ErrorEvent('error', { error: err }));
         });
     }
 

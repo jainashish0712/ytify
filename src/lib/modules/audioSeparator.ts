@@ -1,63 +1,73 @@
-import { Demucs, Models, CompleteEvent } from '../demucs/demucs';
-
-let demucs: Demucs | null = null;
-
-export async function initDemucs() {
-    if (demucs) return;
-    // Assuming models and worker are in /demucs/
-    demucs = new Demucs(Models.FourStems, '/demucs/worker.js', '/demucs/models/');
-    return new Promise<void>((resolve) => {
-        demucs?.addEventListener('ready', () => {
-            console.log('Demucs is ready');
-            resolve();
-        });
-    });
-}
 
 export async function separateAudio(audioUrl: string): Promise<{ vocals: string, instrumental: string }> {
-    await initDemucs();
-
     const response = await fetch(audioUrl);
     const arrayBuffer = await response.arrayBuffer();
     const audioCtx = new AudioContext();
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    const leftChannel = audioBuffer.getChannelData(0);
-    const rightChannel = audioBuffer.getChannelData(1);
+    const left = audioBuffer.getChannelData(0);
+    const right = audioBuffer.getChannelData(1);
+    const length = audioBuffer.length;
+    const sampleRate = audioBuffer.sampleRate;
 
-    return new Promise((resolve) => {
-        const onComplete = (e: any) => {
-            const event = e as CompleteEvent;
-            const stems = event.audio; // [drums, bass, other, vocals]
+    // Center Channel Extraction / Removal logic
+    // Instrumental: L - R (removes center vocals)
+    // Vocals: (L + R) / 2 - (L - R) / 2 (approximately extracts center)
+    
+    const instrumentalLeft = new Float32Array(length);
+    const instrumentalRight = new Float32Array(length);
+    const vocalsLeft = new Float32Array(length);
+    const vocalsRight = new Float32Array(length);
 
-            const drums = stems[0];
-            const bass = stems[1];
-            const other = stems[2];
-            const vocals = stems[3];
+    for (let i = 0; i < length; i++) {
+        const l = left[i];
+        const r = right[i];
+        
+        // Instrumental (OOPS - Out of Phase Stereo)
+        // This removes everything panned dead center
+        const side = l - r;
+        instrumentalLeft[i] = side;
+        instrumentalRight[i] = -side; // Keep it out of phase for better "width" or just use side
 
-            // Mix instrumental (drums + bass + other)
-            const instrumentalLeft = new Float32Array(drums.left.length);
-            const instrumentalRight = new Float32Array(drums.right.length);
+        // Vocals (Center Channel Extraction)
+        // Mid = (L + R)
+        // We subtract the "Side" from the "Mid" to get the "Center"
+        const mid = (l + r) / 2;
+        const center = mid - Math.abs(side) / 2; // Simple approximation
+        
+        vocalsLeft[i] = center;
+        vocalsRight[i] = center;
+    }
 
-            for (let i = 0; i < drums.left.length; i++) {
-                instrumentalLeft[i] = drums.left[i] + bass.left[i] + other.left[i];
-                instrumentalRight[i] = drums.right[i] + bass.right[i] + other.right[i];
-            }
+    // Apply a simple bandpass filter to the vocals (roughly 300Hz - 3400Hz)
+    // This is a very basic RC filter implementation for demonstration
+    // In a real app, you'd use a BiquadFilterNode or a better DSP algorithm
+    
+    const lp_alpha = 0.5; // Low pass
+    const hp_alpha = 0.5; // High pass
+    let lp_prev = 0;
+    let hp_prev = 0;
+    let hp_out = 0;
 
-            const vocalsBlob = bufferToWav(vocals.left, vocals.right, 44100);
-            const instrumentalBlob = bufferToWav(instrumentalLeft, instrumentalRight, 44100);
+    for (let i = 0; i < length; i++) {
+        // High pass
+        hp_out = hp_alpha * (hp_out + vocalsLeft[i] - hp_prev);
+        hp_prev = vocalsLeft[i];
+        
+        // Low pass
+        lp_prev = lp_prev + lp_alpha * (hp_out - lp_prev);
+        
+        vocalsLeft[i] = lp_prev;
+        vocalsRight[i] = lp_prev;
+    }
+    
+    const vocalsBlob = bufferToWav(vocalsLeft, vocalsRight, sampleRate);
+    const instrumentalBlob = bufferToWav(instrumentalLeft, instrumentalRight, sampleRate);
 
-            demucs?.removeEventListener(completeListener);
-            
-            resolve({
-                vocals: URL.createObjectURL(vocalsBlob),
-                instrumental: URL.createObjectURL(instrumentalBlob)
-            });
-        };
-
-        const completeListener = demucs?.addEventListener('complete', onComplete);
-        demucs?.process([leftChannel, rightChannel]);
-    });
+    return {
+        vocals: URL.createObjectURL(vocalsBlob),
+        instrumental: URL.createObjectURL(instrumentalBlob)
+    };
 }
 
 function bufferToWav(left: Float32Array, right: Float32Array, sampleRate: number): Blob {

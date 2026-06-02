@@ -17,7 +17,7 @@ function getNumModelsFromModelName() {
     }
 
     return (
-        "demucs-free-4s" === modelName || "demucs-free-6s" === modelName || "demucs-karaoke" === modelName
+        "demucs-free-4s" === modelName || "4-stems" === modelName || "demucs-free-6s" === modelName || "6-stems" === modelName || "demucs-karaoke" === modelName || "karaoke" === modelName
             ? (e = 1)
             : "demucs-pro-ft" === modelName || "demucs-pro-deluxe" === modelName
                 ? (e = 4)
@@ -27,7 +27,7 @@ function getNumModelsFromModelName() {
 }
 function getNumTargetsFromModelName() {
     let e = [4];
-    return "demucs-free-6s" === modelName ? (e = [6]) : "demucs-karaoke" === modelName ? (e = [2]) : "demucs-pro-ft" === modelName ? (e = [4, 4, 4, 4]) : "demucs-pro-deluxe" === modelName && (e = [4, 4, 4, 2]), e;
+    return "demucs-free-6s" === modelName || "6-stems" === modelName ? (e = [6]) : "demucs-karaoke" === modelName || "karaoke" === modelName ? (e = [2]) : "demucs-pro-ft" === modelName ? (e = [4, 4, 4, 4]) : "demucs-pro-deluxe" === modelName && (e = [4, 4, 4, 2]), e;
 }
 onmessage = async function (m) {
     if ("LOAD_WASM" === m.data.msg) (modelName = m.data.model), (modelBuffers = m.data.modelBuffers);
@@ -38,7 +38,7 @@ onmessage = async function (m) {
             r = getNumModelsFromModelName();
         let t = r,
             o = !1;
-        ("demucs-pro-deluxe" !== modelName && "demucs-pro-cust" !== modelName && "demucs-karaoke" !== modelName) || (console.log("Using augmented inference for model:", modelName), (o = !0), (t *= 2));
+        ("demucs-pro-deluxe" !== modelName && "demucs-pro-cust" !== modelName && "demucs-karaoke" !== modelName && "karaoke" !== modelName) || (console.log("Using augmented inference for model:", modelName), (o = !0), (t *= 2));
         var d = [],
             s = modelBuffers.map((e) => new Uint8Array(e));
         if ("demucs-pro-cust" != modelName) {
@@ -101,7 +101,7 @@ onmessage = async function (m) {
             d.push(p);
         }
         let e;
-        "demucs-karaoke" === modelName || "demucs-free-4s" === modelName || "demucs-free-6s" === modelName || "demucs-pro-cust" === modelName || "bass" === modelName || "drums" === modelName || "vocals" === modelName
+        "demucs-karaoke" === modelName || "karaoke" === modelName || "demucs-free-4s" === modelName || "4-stems" === modelName || "demucs-free-6s" === modelName || "6-stems" === modelName || "demucs-pro-cust" === modelName || "bass" === modelName || "drums" === modelName || "vocals" === modelName
             ? (e = d[0])
             : "demucs-pro-ft" === modelName
                 ? (e = [d[0][0], d[0][1], d[1][2], d[1][3], d[2][4], d[2][5], d[3][6], d[3][7]])
