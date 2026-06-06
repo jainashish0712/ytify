@@ -128,6 +128,25 @@ createRoot(() => {
   equalizerInstance.enableRealtimeProcessing(true);
   equalizerInstance.debugAudioChain();
 
+  // Add visibilitychange listener to handle iOS background/foreground transitions
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      if (equalizerInstance) {
+        equalizerInstance.unlockAudioContext().then(() => {
+          // Re-apply pitch/speed on restore
+          // const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
+          // playerStore.audio.playbackRate = pitchRate * playerStore.playbackRate;
+
+          // Sync playback state: if the app thinks it's playing but the audio element is paused
+          // (likely by iOS system), try to resume it.
+          if (playerStore.playbackState === 'playing' && playerStore.audio.paused) {
+            playerStore.audio.play().catch(e => console.warn("[player.ts] Failed to resume audio on visibility change:", e));
+          }
+        });
+      }
+    }
+  });
+
   // Set initial volume on the equalizer's gain node
   if (true && equalizerInstance.gainNode) {
     equalizerInstance.gainNode.gain.value = playerStore.volume;
@@ -146,7 +165,7 @@ createRoot(() => {
     equalizerInstance.setBandGain('highMid', 0);     // neutral high-mid (4000Hz)
     equalizerInstance.setBandGain('high', -3);       // slight cut high (8000Hz)
     equalizerInstance.setBandGain('highshelf', -5);  // cut highshelf (16000Hz)
-    equalizerInstance.setPitch(2.41);
+    equalizerInstance.setPitch(0.41);
     ;
     ;
   }
@@ -206,6 +225,11 @@ createRoot(() => {
 
   playerStore.audio.onplaying = () => {
     setPlayerStore('playbackState', 'playing');
+
+    // Re-apply pitch/speed on playing to ensure it's not lost (e.g. by iOS background restore)
+    // const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
+    // playerStore.audio.playbackRate = pitchRate * playerStore.playbackRate;
+
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => {
         m.updateMediaSessionPlaybackState('playing');
@@ -237,6 +261,19 @@ createRoot(() => {
       });
     clearTimeout(historyTimeoutId);
   };
+
+  // Ensure playbackRate stays consistent with pitch and base speed
+  // playerStore.audio.addEventListener('ratechange', () => {
+  //   if (playerStore.isWatching && !playerStore.isMusic) return;
+
+  //   const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
+  //   const intended = pitchRate * playerStore.playbackRate;
+
+  //   if (Math.abs(playerStore.audio.playbackRate - intended) > 0.001) {
+  //     playerStore.audio.playbackRate = intended;
+  //   }
+  // });
+
   playerStore.audio.addEventListener('loadeddata', themer);
 
 
@@ -255,7 +292,10 @@ createRoot(() => {
 
     historyID = playerStore.stream.id;
     clearTimeout(historyTimeoutId);
-    playerStore.audio.playbackRate = playerStore.playbackRate;
+
+    // Apply pitch from equalizer if available, otherwise use default playbackRate
+    // const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
+    // playerStore.audio.playbackRate = pitchRate * playerStore.playbackRate;
   }
 
   playerStore.audio.onwaiting = () => {
@@ -285,7 +325,7 @@ createRoot(() => {
       const diff = isMusic ? (offsetHeight - offsetWidth) : offsetWidth;
       const scale = seconds / fullDuration;
       const shift = Math.floor(scale * diff);
-      cssVar('--player-bp', `-${shift}px 0`);
+      // cssVar('--player-bp', `-${shift}px 0`);
     }
 
     const t = params.get('t');

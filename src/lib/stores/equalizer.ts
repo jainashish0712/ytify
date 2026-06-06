@@ -17,7 +17,7 @@ export class Equalizer {
     private mediaSourceNode: MediaElementAudioSourceNode | null = null;
     public gainNode: GainNode | null = null; // Made public
 
-    private pitchSemitones: number = 2.41; // Using your configured default
+    private pitchSemitones: number = 0.41; // Using your configured default
 
     constructor(audio: HTMLAudioElement) {
         // const { index, invidious } = store.api;
@@ -204,13 +204,17 @@ export class Equalizer {
 
         if (true) {
         // if (this.realtimeEnabled) {
-            const playbackRate = this.semitonesToPlaybackRate(semitones);
+            const playbackRate = this.getPlaybackRate();
             this.sourceElement.playbackRate = playbackRate;
 
         } else {
             // WARNING: This only affects the pitch of the NEXT call to renderAndPlayProcessedAudio.
             console.warn(`[Equalizer.setPitch] Real-time disabled. Pitch will apply on next offline render.`);
         }
+    }
+
+    public getPlaybackRate(): number {
+        return this.semitonesToPlaybackRate(this.pitchSemitones);
     }
 
     public getPitch(): number { return this.pitchSemitones; }

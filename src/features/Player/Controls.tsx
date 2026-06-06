@@ -86,8 +86,12 @@ export default function(_: {
           onchange={e => {
             const ref = e.target;
             const speed = parseFloat(ref.value);
-            playerStore.audio.playbackRate = speed;
             setPlayerStore('playbackRate', speed);
+
+            // Apply combined pitch and speed
+              const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
+              playerStore.audio.playbackRate = speed * pitchRate;
+
             updatePositionState();
             ref.blur();
           }}
@@ -97,7 +101,9 @@ export default function(_: {
           <option value="0.50">0.50x</option>
           <option value="0.75">0.75x</option>
           <option value="0.87">0.87x</option>
+          <option value="0.97">0.97x</option>
           <option value="1.00">1.00x</option>
+          <option value="1.05">1.05x</option>
           <option value="1.25">1.25x</option>
           <option value="1.50">1.50x</option>
           <option value="1.75">1.75x</option>
