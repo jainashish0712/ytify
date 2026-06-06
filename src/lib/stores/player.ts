@@ -85,6 +85,8 @@ export function playNext() {
     id: nextStream.context?.id || '',
     src: nextStream.context?.src || ''
   });
+  if ('mediaSession' in navigator)
+    import('@modules/mediaSession').then(m => m.setMediaSessionMetadata());
   setQueueStore('list', l => {
     let newList = l.slice(1);
     if (newList.length > 1) {
@@ -110,6 +112,8 @@ export function playPrev() {
     id: prevStream.context?.id || '',
     src: prevStream.context?.src || ''
   });
+  if ('mediaSession' in navigator)
+    import('@modules/mediaSession').then(m => m.setMediaSessionMetadata());
   player(prevStream.id);
 }
 createRoot(() => {
@@ -118,7 +122,10 @@ createRoot(() => {
   let historyTimeoutId = 0;
 
   if ('mediaSession' in navigator)
-    import('@modules/mediaSession').then(m => m.initMediaSession());
+    import('@modules/mediaSession').then(m => {
+      m.initMediaSession();
+      m.setMediaSessionMetadata();
+    });
 
   // Listen for visibility changes to manage AudioContext
   document.addEventListener('visibilitychange', () => {
@@ -133,15 +140,9 @@ createRoot(() => {
   // Instantiate Equalizer
   equalizerInstance = new Equalizer(playerStore.audio);
 
-  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) || /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-  if (isIOS) {
-    console.log("[player.ts] iOS/Safari detected - using offline rendering for background play compatibility");
-    equalizerInstance.enableRealtimeProcessing(false);
-  } else {
-    // Enable real-time processing for other platforms - this will handle context unlocking automatically
-    equalizerInstance.enableRealtimeProcessing(true);
-  }
+  // Disable real-time processing for all platforms to use offline rendering
+  console.log("[player.ts] Using offline rendering for all platforms");
+  equalizerInstance.enableRealtimeProcessing(false);
 
   equalizerInstance.debugAudioChain();
 
@@ -181,7 +182,7 @@ createRoot(() => {
           console.log("[player.ts] === DYNAMIC IMPULSE RESPONSE LOADED SUCCESSFULLY ===");
           console.log("[player.ts] IR is now active in the audio chain");
           equalizerInstance.debugAudioChain();
-          if (isIOS && playerStore.playbackState === 'playing') {
+          if (playerStore.playbackState === 'playing') {
              equalizerInstance?.renderAndPlayProcessedAudio();
           }
         })
@@ -221,9 +222,6 @@ createRoot(() => {
 
   playerStore.audio.onplaying = () => {
     setPlayerStore('playbackState', 'playing');
-    if (!isIOS) {
-        equalizerInstance?.resumeContext();
-    }
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => {
         m.updateMediaSessionPlaybackState('playing');
@@ -248,9 +246,6 @@ createRoot(() => {
 
   playerStore.audio.onpause = () => {
     setPlayerStore('playbackState', 'paused');
-    if (!isIOS) {
-        equalizerInstance?.suspendContext();
-    }
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => {
         m.updateMediaSessionPlaybackState('paused');
@@ -280,9 +275,9 @@ createRoot(() => {
     equalizerInstance?.reset(playerStore.audio.src);
 
     if (isPlayable) {
-      if (isIOS && !isBlob) {
-        // On iOS, don't play the raw source. Wait for onloadedmetadata -> renderAndPlayProcessedAudio.
-        console.log("[player.ts] onloadstart (iOS) - suppressing raw playback, waiting for render.");
+      if (!isBlob) {
+        // Don't play the raw source. Wait for onloadedmetadata -> renderAndPlayProcessedAudio.
+        console.log("[player.ts] onloadstart - suppressing raw playback, waiting for render.");
         setPlayerStore('playbackState', 'loading');
       } else {
         playerStore.audio.play();
@@ -360,10 +355,8 @@ createRoot(() => {
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
 
-    if (isIOS) {
-      console.log("[player.ts] onloadedmetadata (iOS) - triggering offline render for background play");
-      equalizerInstance?.renderAndPlayProcessedAudio();
-    }
+    console.log("[player.ts] onloadedmetadata - triggering offline render");
+    equalizerInstance?.renderAndPlayProcessedAudio();
   }
 
   playerStore.audio.oncanplaythrough = async function() {

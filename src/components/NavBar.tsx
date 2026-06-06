@@ -15,6 +15,15 @@ export default function() {
       ></i>
 
       <i
+        aria-label={t('player_now_playing')}
+        class="ri-disc-fill"
+        classList={{ on: navStore.player.state }}
+        onclick={() => {
+          setNavStore('player', 'state', !navStore.player.state);
+        }}
+      ></i>
+
+      <i
         aria-label={t('nav_search')}
         class={'ri-search-2-' + (navStore.search.state ? 'fill' : 'line')
         }

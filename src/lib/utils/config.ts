@@ -19,7 +19,7 @@ export let config = {
   contextualFill: false,
   queuePrefetch: false,
   authorGrouping: false,
-  searchFilter: 'all',
+  searchFilter: 'song',
   volume: '100',
   dbsync: '',
   sortBy: 'modified' as 'modified' | 'name' | 'artist' | 'duration',

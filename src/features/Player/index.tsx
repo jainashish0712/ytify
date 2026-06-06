@@ -18,9 +18,24 @@ export default function() {
   const [showLyrics, setShowLyrics] = createSignal(false);
   const [availableIrsFiles, setAvailableIrsFiles] = createSignal(IRS_OPTIONS[0].files);
 
+  let touchStartY = 0;
+
   onMount(() => {
     setNavStore('player', 'ref', playerSection);
     playerSection.scrollIntoView();
+
+    playerSection.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    playerSection.addEventListener('touchmove', (e) => {
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchY - touchStartY;
+
+      if (deltaY > 50 && playerSection.scrollTop <= 0) {
+        closeFeature('player');
+      }
+    }, { passive: true });
   });
 
   createEffect(() => {

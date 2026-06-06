@@ -83,3 +83,18 @@ export function updateMediaSessionPlaybackState(state: 'playing' | 'paused' | 'n
     navigator.mediaSession.playbackState = state === 'none' ? 'none' : (state === 'playing' ? 'playing' : 'paused');
     console.log("[mediaSession] Updated playback state:", navigator.mediaSession.playbackState);
 }
+
+export function setMediaSessionMetadata() {
+  if (!('mediaSession' in navigator)) return;
+
+  const { stream, mediaArtwork } = playerStore;
+  
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: stream.title,
+    artist: stream.author?.replace(' - Topic', ''),
+    artwork: [
+      { src: mediaArtwork, sizes: '512x512', type: 'image/png' }
+    ]
+  });
+  console.log("[mediaSession] Updated metadata for:", stream.title);
+}

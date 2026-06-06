@@ -37,6 +37,7 @@ body {
   height: 100dvh;
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
 }
 
 select {

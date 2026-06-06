@@ -120,14 +120,8 @@ export default function(data: YTItem & {
           });
 
 
-          const isPortrait = matchMedia('(orientation:portrait)').matches;
-
-          if (isPortrait || config.landscapeSections === '1') {
-            setNavStore('player', 'state', Boolean(config.watchMode));
-
-            if (config.watchMode)
-              navStore.player.ref?.scrollIntoView();
-          }
+          setNavStore('player', 'state', true);
+          navStore.player.ref?.scrollIntoView();
 
           if (config.contextualFill && (data.context?.src === 'collection' || (data.context?.src === 'playlists')) && data.context?.id !== 'history') {
             const collectionItems = data.context.src === 'collection' ? getCollectionItems(data.context.id) :
