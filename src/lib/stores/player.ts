@@ -86,6 +86,8 @@ export function playNext() {
     id: nextStream.context?.id || '',
     src: nextStream.context?.src || ''
   });
+  if ('mediaSession' in navigator)
+    import('@modules/mediaSession').then(m => m.setMediaSessionMetadata());
   setQueueStore('list', l => {
     let newList = l.slice(1);
     if (newList.length > 1) {
@@ -111,6 +113,8 @@ export function playPrev() {
     id: prevStream.context?.id || '',
     src: prevStream.context?.src || ''
   });
+  if ('mediaSession' in navigator)
+    import('@modules/mediaSession').then(m => m.setMediaSessionMetadata());
   player(prevStream.id);
 }
 createRoot(() => {
@@ -119,7 +123,10 @@ createRoot(() => {
   let historyTimeoutId = 0;
 
   if ('mediaSession' in navigator)
-    import('@modules/mediaSession').then(m => m.initMediaSession());
+    import('@modules/mediaSession').then(m => {
+      m.initMediaSession();
+      m.setMediaSessionMetadata();
+    });
 
   // Instantiate Equalizer and enable real-time processing
   equalizerInstance = new Equalizer(playerStore.audio);

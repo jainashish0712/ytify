@@ -498,28 +498,30 @@ preamp.gain.value =Math.pow(5, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20
         this.sourceElement.currentTime = 0;
 
         // IMPORTANT: Change the source to the processed WAV file (allows background play)
+        console.log("Equalizer: processedAudioUrl", url);
+        console.log("Equalizer: sampleRate", buffer.sampleRate);
+        console.log("Equalizer: audio element state", this.sourceElement.readyState, this.sourceElement.paused);
 
+        const wasPaused = this.sourceElement.paused;
+        this.sourceElement.pause();
+        this.sourceElement.src = url;
+        this.sourceElement.load();
+        this.sourceElement.currentTime = seekTime; // <-- use passed time
 
-
-
-if (this.isIOSorSafari()) {
-    this.sourceElement.pause();
-    this.sourceElement.src = '';
-    this.sourceElement.load();
-    this.sourceElement.src = url;
-    this.sourceElement.load();
-    this.sourceElement.currentTime = seekTime; // <-- use passed time
-    setTimeout(() => {
-        this.sourceElement.play().catch(e => console.warn("Failed to auto-play processed audio:", e));
-    }, 100);
-} else {
-    this.sourceElement.src = url;
-    this.sourceElement.load();
-    this.sourceElement.currentTime = seekTime; // <-- use passed time
-    if (!this.sourceElement.paused) {
-        this.sourceElement.play().catch(e => console.warn("Failed to auto-play processed audio:", e));
-    }
-}
+        if (!wasPaused) {
+            setTimeout(() => {
+                this.sourceElement.play().catch(e => console.warn("Failed to auto-play processed audio:", e));
+                // Force update MediaSession after play starts
+                if ('mediaSession' in navigator) {
+                    import('../modules/mediaSession').then(m => m.updateMediaSessionPosition());
+                }
+            }, 100);
+        } else {
+            // Even if paused, update position to enable seekbar
+            if ('mediaSession' in navigator) {
+                import('../modules/mediaSession').then(m => m.updateMediaSessionPosition());
+            }
+        }
 
         try {
             document.dispatchEvent(new CustomEvent('equalizer:processed-ready', { detail: { success: true } }));

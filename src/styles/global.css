@@ -22,7 +22,7 @@
   --roundness: 0.4rem;
   --blur: blur(var(--size-px-3));
   --player-bg: none;
-  --player-bp: 0 0;
+  /* --player-bp: 0 0; */
   --landscapeSections: 2;
   --trueBg: var(--bg);
   --font: ui-rounded, Segoe UI, source-sans-pro, Inter, Noto Sans, Oxygen, Calibri, Cantarell, Ubuntu, Roboto, system-ui, Open Sans, Helvetica Neue, sans-serif;
@@ -37,6 +37,7 @@ body {
   height: 100dvh;
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior-y: none;
 }
 
 select {

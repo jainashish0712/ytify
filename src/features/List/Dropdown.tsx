@@ -85,7 +85,7 @@ export default function Dropdown() {
             addToQueue(fullList);
             setPlayerStore('stream', fullList[0]);
             player(fullList[0].id);
-            setNavStore('queue', 'state', true);
+            setNavStore('player', 'state', true);
           }}
         >
           <i class="ri-play-large-line"></i>{t("list_play")}

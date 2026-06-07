@@ -1,8 +1,8 @@
 /* === range theme and appearance === */
 input[type="range"] {
   font-size: 1.5rem;
-  --thumb-height: 0.625em;
-  --track-height: 0.125em;
+  --thumb-height: 0.325em;
+  --track-height: 0.625em;
   --track-color: var(--onBg);
   --brightness-hover: 180%;
   --brightness-down: 80%;
@@ -10,6 +10,7 @@ input[type="range"] {
   /* === range commons === */
   position: relative;
   background: #fff0;
+    /* backdrop-filter: blur(var(--size-px-3)); */
   overflow: hidden;
 }
 
@@ -41,8 +42,8 @@ input[type="range"]::-webkit-slider-thumb {
   --box-fill: calc(-100vmax - var(--thumb-width, var(--thumb-height))) 0 0 100vmax currentColor;
 
   width: var(--thumb-width, var(--thumb-height));
-  background: linear-gradient(currentColor 0 0) scroll no-repeat left center / 50% calc(var(--track-height) + 1px);
-  background-color: currentColor;
+  background: linear-gradient(currentColor 0 0) scroll no-repeat left center / 50% calc(var(--track-height) + 6px);
+  /* background-color: currentColor; */
   box-shadow: var(--box-fill);
   border-radius: var(--thumb-width, var(--thumb-height));
 
@@ -68,7 +69,7 @@ input[type="range"]:active::-webkit-slider-thumb {
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
-  background: linear-gradient(var(--track-color) 0 0) scroll no-repeat center / 100% calc(var(--track-height) + 1px);
+  background: linear-gradient(var(--track-color) 0 0) scroll no-repeat center / 100% calc(var(--track-height) + 6px);
 }
 
 input[type="range"]:disabled::-webkit-slider-thumb {
@@ -104,7 +105,10 @@ input[type="range"]:active::-moz-range-thumb {
 
 input[type="range"]::-moz-range-track {
   width: 100%;
-  background: var(--track-color);
+    background-color: hsl(from white h s l / 0.2);
+  /* background: var(--track-color); */
+    backdrop-filter: blur(var(--size-px-6));
+
 }
 
 input[type="range"]::-moz-range-progress {
@@ -115,7 +119,7 @@ input[type="range"]::-moz-range-progress {
 
 input[type="range"]::-moz-range-track,
 input[type="range"]::-moz-range-progress {
-  height: calc(var(--track-height) + 1px);
+  height: calc(var(--track-height) + 6px);
   border-radius: var(--track-height);
 }
 

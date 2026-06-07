@@ -37,7 +37,7 @@ export function getThumbIdFromLink(url: string) {
 
   // for featured playlists
   if (url.startsWith('/') || url.length === 11) return url;
-  // simplify url 
+  // simplify url
   if (url.includes('wsrv.nl'))
     url = url.replace('https://wsrv.nl?url=', '');
 

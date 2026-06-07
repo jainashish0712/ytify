@@ -7,7 +7,8 @@ import { closeFeature, playerStore, setNavStore, setStore, t, updateParam } from
 import { IRS_OPTIONS } from "../../lib/utils/irs";
 import { irsStore, updateSelectedIrsCategory, updateSelectedIrsFile } from "../../lib/stores/irs";
 
-const MediaArtwork = lazy(() => import('../../components/MediaPartials/MediaArtwork'));
+import MediaArtwork from '../../components/MediaPartials/MediaArtwork'
+// const MediaArtwork = lazy(() => import('../../components/MediaPartials/MediaArtwork'));
 const Lyrics = lazy(() => import('./Lyrics'));
 const Video = lazy(() => import('./Video'));
 const Controls = lazy(() => import('./Controls'));
@@ -18,9 +19,24 @@ export default function() {
   const [showLyrics, setShowLyrics] = createSignal(false);
   const [availableIrsFiles, setAvailableIrsFiles] = createSignal(IRS_OPTIONS[0].files);
 
+  let touchStartY = 0;
+
   onMount(() => {
     setNavStore('player', 'ref', playerSection);
     playerSection.scrollIntoView();
+
+    playerSection.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+
+    playerSection.addEventListener('touchmove', (e) => {
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchY - touchStartY;
+
+      if (deltaY > 50 && playerSection.scrollTop <= 0) {
+        closeFeature('player');
+      }
+    }, { passive: true });
   });
 
   createEffect(() => {
@@ -34,7 +50,8 @@ export default function() {
 
   createEffect(() => {
     const { immersive, mediaArtwork } = playerStore;
-    if (immersive)
+    if (true)
+    // if (immersive)
       cssVar('--player-bg', `url(${mediaArtwork})`);
   });
 
@@ -58,10 +75,10 @@ export default function() {
       id="playerSection"
       ref={playerSection}>
 
-      <Show when={playerStore.immersive} >
+      {/* <Show when={true} > */}
         <div class="bg-pane" />
         <div class="bg-image" />
-      </Show>
+      {/* </Show> */}
 
       <header class="topShelf">
         <p>
@@ -120,7 +137,8 @@ export default function() {
         </Show>
 
         <Show when={(!playerStore.isWatching || playerStore.isMusic) && config.loadImage && !showLyrics()}>
-          <MediaArtwork />
+          {/* <MediaArtwork /> */}
+          <></>
         </Show>
 
 
