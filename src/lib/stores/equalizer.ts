@@ -9,6 +9,7 @@ export class Equalizer {
     private filters: BiquadFilterNode[];
     private convolver: ConvolverNode;
     private preamp: GainNode;
+    private jamesDSPNode: AudioWorkletNode | null = null;
     private irBuffer: AudioBuffer | null = null;
     private cachedAudioBuffer: AudioBuffer | null = null;
     private originalAudioSrc: string = ''; // New: Stores the initial audio URL
@@ -17,6 +18,7 @@ export class Equalizer {
     private realtimeEnabled: boolean = false;
     private mediaSourceNode: MediaElementAudioSourceNode | null = null;
     public gainNode: GainNode | null = null; // Made public
+    public dspPort: MessagePort | null = null; // Port for communicating with JamesDSP
 
     private pitchSemitones: number = 0.41; // Using your configured default
 
@@ -24,18 +26,15 @@ export class Equalizer {
         console.log("[Equalizer Constructor] === INITIALIZING EQUALIZER ===");
         this.sourceElement = audio;
         this.originalAudioSrc = audio.src; // Capture the initial source URL
-
         try {
             this.sourceElement.crossOrigin = 'anonymous';
         } catch (e) {
             // ignore
         }
-
         this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
         console.log("[Equalizer Constructor] AudioContext created - State:", this.ctx.state);
         // IMPORTANT: Unlock on first user gesture to enable real-time audio playback
         this.setupAudioContextUnlock();
-
         // --- Filter Setup (Used for the Offline Context) ---
         this.filters = [
             this.ctx.createBiquadFilter(),
@@ -77,8 +76,34 @@ export class Equalizer {
         //     console.log("[Equalizer] Audio play event detected - _unlockAudioContext...");
         //     this._unlockAudioContext();
         // });
-
+        
+        this.loadJamesDSPWorklet();
         console.log("[Equalizer Constructor] === EQUALIZER INITIALIZATION COMPLETE ===");
+    }
+
+    public postMessageToDsp(message: any) {
+        if (this.dspPort) {
+            this.dspPort.postMessage(message);
+        } else {
+            console.warn("[Equalizer] Cannot post message: DSP port not available.");
+        }
+    }
+
+    private async loadJamesDSPWorklet(): Promise<void> {
+        if (!this.ctx.audioWorklet) {
+            console.error("[Equalizer.loadJamesDSPWorklet] AudioWorklet is not supported in this browser.");
+            return;
+        }
+        try {
+            // Use a dynamic import to get the URL, which vite will handle.
+            const workletURL = new URL('../modules/james-dsp-processor.ts', import.meta.url);
+            await this.ctx.audioWorklet.addModule(workletURL.href);
+            this.jamesDSPNode = new AudioWorkletNode(this.ctx, 'james-dsp-processor');
+            this.dspPort = this.jamesDSPNode.port; // Store the port
+            console.log("[Equalizer.loadJamesDSPWorklet] JamesDSP worklet loaded and node created.");
+        } catch (e) {
+            console.error("[Equalizer.loadJamesDSPWorklet] Error loading or creating JamesDSP worklet:", e);
+        }
     }
 
     /** Setup automatic AudioContext _unlockAudioContext on first user gesture or audio play */
@@ -181,32 +206,7 @@ export class Equalizer {
                 console.log("[Equalizer.enableRealtimeProcessing] mediaSourceNode created");
 
                 // Connect the graph immediately after creating mediaSourceNode
-                console.log("[Equalizer.enableRealtimeProcessing] Connecting audio graph...");
-                this.mediaSourceNode.connect(this.preamp);
-                console.log("[Equalizer.enableRealtimeProcessing] mediaSourceNode -> preamp");
-                this.preamp.connect(this.filters[0]);
-                console.log("[Equalizer.enableRealtimeProcessing] preamp -> filters[0]");
-                for (let i = 0; i < this.filters.length - 1; i++) {
-                    this.filters[i].connect(this.filters[i + 1]);
-                    console.log(`[Equalizer.enableRealtimeProcessing] filters[${i}] -> filters[${i + 1}]`);
-                }
-
-                console.log("[Equalizer.enableRealtimeProcessing] irBuffer loaded:", this.irBuffer !== null, "convolver.buffer:", this.convolver.buffer !== null);
-                if (this.irBuffer && this.convolver.buffer) {
-                    // If impulse response is loaded, include convolver
-                    console.log("[Equalizer.enableRealtimeProcessing] Connecting convolver to chain");
-                    this.filters[this.filters.length - 1].connect(this.convolver);
-                    console.log("[Equalizer.enableRealtimeProcessing] filters[last] -> convolver");
-                    this.convolver.connect(this.gainNode!);
-                    console.log("[Equalizer.enableRealtimeProcessing] convolver -> gainNode");
-                } else {
-                    // Otherwise, bypass convolver
-                    console.log("[Equalizer.enableRealtimeProcessing] BYPASSING convolver (not loaded yet)");
-                    this.filters[this.filters.length - 1].connect(this.gainNode!);
-                    console.log("[Equalizer.enableRealtimeProcessing] filters[last] -> gainNode (bypassing convolver)");
-                }
-                this.gainNode!.connect(this.ctx.destination);
-                console.log("[Equalizer.enableRealtimeProcessing] gainNode -> destination");
+                this.reconnectAudioGraph(); // Use the reconnect logic to build the graph
 
                 console.log("[Equalizer.enableRealtimeProcessing] AUDIO GRAPH CONNECTED SUCCESSFULLY");
             } else {
@@ -229,19 +229,15 @@ export class Equalizer {
             if (this.mediaSourceNode) {
                 console.log("[Equalizer.enableRealtimeProcessing] Disconnecting audio graph...");
                 // Disconnect the graph
-                this.mediaSourceNode.disconnect(this.preamp);
-                this.preamp.disconnect(this.filters[0]);
-                for (let i = 0; i < this.filters.length - 1; i++) {
-                    this.filters[i].disconnect(this.filters[i + 1]);
+                this.mediaSourceNode.disconnect();
+                this.preamp.disconnect();
+                for (let i = 0; i < this.filters.length; i++) {
+                    this.filters[i].disconnect();
                 }
+                this.convolver.disconnect();
+                if (this.jamesDSPNode) this.jamesDSPNode.disconnect();
+                this.gainNode!.disconnect();
 
-                if (this.irBuffer && this.convolver.buffer) {
-                    this.filters[this.filters.length - 1].disconnect(this.convolver);
-                    this.convolver.disconnect(this.gainNode!);
-                } else {
-                    this.filters[this.filters.length - 1].disconnect(this.gainNode!);
-                }
-                this.gainNode!.disconnect(this.ctx.destination);
                 console.log("[Equalizer.enableRealtimeProcessing] Audio graph disconnected");
             }
 
@@ -423,27 +419,44 @@ try {
         }
 
         console.log("[Equalizer.reconnectAudioGraph] Disconnecting old graph...");
-        // Disconnect everything
+        // Disconnect everything to be safe
         this.mediaSourceNode.disconnect();
         this.preamp.disconnect();
         for (let i = 0; i < this.filters.length; i++) {
             this.filters[i].disconnect();
         }
         this.convolver.disconnect();
+        if (this.jamesDSPNode) this.jamesDSPNode.disconnect();
         this.gainNode!.disconnect();
 
-        console.log("[Equalizer.reconnectAudioGraph] Reconnecting with convolver...");
-        // Reconnect with convolver in the chain
+        console.log("[Equalizer.reconnectAudioGraph] Reconnecting graph...");
+        // Reconnect the main chain
         this.mediaSourceNode.connect(this.preamp);
         this.preamp.connect(this.filters[0]);
         for (let i = 0; i < this.filters.length - 1; i++) {
             this.filters[i].connect(this.filters[i + 1]);
         }
-        // Always include convolver now that IR is loaded
-        this.filters[this.filters.length - 1].connect(this.convolver);
-        this.convolver.connect(this.gainNode!);
+        let lastNode: AudioNode = this.filters[this.filters.length - 1];
+
+        // Conditionally connect convolver
+        if (this.irBuffer && this.convolver.buffer) {
+            console.log("[Equalizer.reconnectAudioGraph] Including convolver in chain");
+            lastNode.connect(this.convolver);
+            lastNode = this.convolver;
+        }
+
+        // Conditionally connect JamesDSP
+        if (this.jamesDSPNode) {
+            console.log("[Equalizer.reconnectAudioGraph] Including JamesDSPNode in chain");
+            lastNode.connect(this.jamesDSPNode);
+            lastNode = this.jamesDSPNode;
+        }
+        
+        // Connect the end of the chain to the gain node and destination
+        lastNode.connect(this.gainNode!);
         this.gainNode!.connect(this.ctx.destination);
-        console.log("[Equalizer.reconnectAudioGraph] Graph reconnected with convolver included");
+
+        console.log("[Equalizer.reconnectAudioGraph] Graph reconnected successfully");
     }
 
     // NOTE: enableConvolver is REMOVED/Obsolete.

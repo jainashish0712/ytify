@@ -4,11 +4,12 @@ import { closeFeature, setNavStore, t, setStore, updateLang } from '@stores';
 import { Selector } from '@components/Selector.tsx';
 import { config, setConfig, drawer, setDrawer, cssVar, themer, quickSwitch, deleteCollection, getCollection } from '@utils';
 import Dropdown from "./Dropdown";
+import DSP from "./DSP";
 
 export default function() {
   let settingsSection!: HTMLDivElement;
   const isPWA = matchMedia('(display-mode: standalone)').matches;
-
+  
   onMount(() => {
     setNavStore('settings', 'ref', settingsSection);
     settingsSection.scrollIntoView();
@@ -240,6 +241,7 @@ export default function() {
           <option value="light">{t('settings_theming_scheme_light')}</option>
           <option value="dark">{t('settings_theming_scheme_dark')}</option>
         </Selector>
+        <DSP />
       </div>
       <br />
       <br />
