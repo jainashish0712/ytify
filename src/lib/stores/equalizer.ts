@@ -1,3 +1,5 @@
+import { Jungle } from '../modules/jungle.js';
+
 // --- Equalizer.ts ---
 // This class manages audio equalization and pitch shifting, supporting both
 // real-time processing via Web Audio API and offline pre-processing for compatibility.
@@ -8,6 +10,7 @@ export class Equalizer {
     private filters: BiquadFilterNode[];
     private convolver: ConvolverNode;
     private preamp: GainNode;
+    private jungle: any; // Pitch shifter node
     private irBuffer: AudioBuffer | null = null;
     private cachedAudioBuffer: AudioBuffer | null = null;
     private originalAudioSrc: string = ''; // New: Stores the initial audio URL
@@ -43,31 +46,30 @@ export class Equalizer {
         this.setupAudioContextUnlock();
 
         // --- Filter Setup (Used for the Offline Context) ---
-        this.filters = [
-            this.ctx.createBiquadFilter(),
-            this.ctx.createBiquadFilter(),
-            this.ctx.createBiquadFilter(),
-            this.ctx.createBiquadFilter(),
-            this.ctx.createBiquadFilter(),
-            this.ctx.createBiquadFilter(),
-            this.ctx.createBiquadFilter(),
-            this.ctx.createBiquadFilter(),
-        ];
+        this.filters = Array.from({ length: 16 }, () => this.ctx.createBiquadFilter());
         // Band definitions
         const bandDefs = [
-            { type: 'lowshelf',  freq: 40,    Q: 1 },
-            { type: 'peaking',   freq: 150,   Q: 1 },
-            { type: 'peaking',   freq: 400,   Q: 1 },
-            { type: 'peaking',   freq: 1000,  Q: 1 },
-            { type: 'peaking',   freq: 2000,  Q: 1 },
-            { type: 'peaking',   freq: 4000,  Q: 1 },
-            { type: 'peaking',   freq: 8000,  Q: 1 },
-            { type: 'highshelf', freq: 16000, Q: 1 },
+            { type: 'lowshelf',  freq: 32 },
+            { type: 'peaking',   freq: 64 },
+            { type: 'peaking',   freq: 125 },
+            { type: 'peaking',   freq: 250 },
+            { type: 'peaking',   freq: 500 },
+            { type: 'peaking',   freq: 1000 },
+            { type: 'peaking',   freq: 1500 },
+            { type: 'peaking',   freq: 2000 },
+            { type: 'peaking',   freq: 3000 },
+            { type: 'peaking',   freq: 4000 },
+            { type: 'peaking',   freq: 6000 },
+            { type: 'peaking',   freq: 8000 },
+            { type: 'peaking',   freq: 10000 },
+            { type: 'peaking',   freq: 12000 },
+            { type: 'peaking',   freq: 14000 },
+            { type: 'highshelf', freq: 16000 },
         ];
         for (let i = 0; i < this.filters.length; i++) {
             this.filters[i].type = bandDefs[i].type as BiquadFilterType;
             this.filters[i].frequency.value = bandDefs[i].freq;
-            this.filters[i].Q.value = bandDefs[i].Q;
+            this.filters[i].Q.value = 1;
         }
 
         this.convolver = this.ctx.createConvolver();
@@ -84,7 +86,7 @@ export class Equalizer {
             this.unlockAudioContext();
         });
 
-
+        this.jungle = new Jungle(this.ctx);
     }
 
     /** Setup automatic AudioContext unlock on first user gesture or audio play */
@@ -126,7 +128,8 @@ export class Equalizer {
 
                 // Connect the graph immediately after creating mediaSourceNode
 
-                this.mediaSourceNode.connect(this.preamp);
+                this.mediaSourceNode.connect(this.jungle.input);
+                this.jungle.output.connect(this.preamp);
 
                 this.preamp.connect(this.filters[0]);
 
@@ -201,13 +204,13 @@ export class Equalizer {
     public setPitch(semitones: number): void {
         this.pitchSemitones = semitones;
 
+        const pitchMult = Math.pow(2, semitones / 12) - 1;
+        
+        if (this.jungle) {
+            this.jungle.setPitchOffset(pitchMult);
+        }
 
-        if (true) {
-        // if (this.realtimeEnabled) {
-            const playbackRate = this.getPlaybackRate();
-            this.sourceElement.playbackRate = playbackRate;
-
-        } else {
+        if (!this.realtimeEnabled) {
             // WARNING: This only affects the pitch of the NEXT call to renderAndPlayProcessedAudio.
             console.warn(`[Equalizer.setPitch] Real-time disabled. Pitch will apply on next offline render.`);
         }
@@ -218,6 +221,9 @@ export class Equalizer {
     }
 
     public getPitch(): number { return this.pitchSemitones; }
+    public getBandGains(): number[] {
+        return this.filters.map(f => f.gain.value);
+    }
     public resetPitch(): void { this.setPitch(0); }
     // --- END PITCH METHODS ---
 
@@ -381,7 +387,8 @@ try {
 
 
         // Reconnect with convolver in the chain
-        this.mediaSourceNode.connect(this.preamp);
+        this.mediaSourceNode.connect(this.jungle.input);
+        this.jungle.output.connect(this.preamp);
         this.preamp.connect(this.filters[0]);
         for (let i = 0; i < this.filters.length - 1; i++) {
             this.filters[i].connect(this.filters[i + 1]);
@@ -407,8 +414,8 @@ try {
         const audioBuf = this.cachedAudioBuffer;
 
         const rate = this.ctx.sampleRate; // Use hardware sample rate
-        const playbackRate = this.semitonesToPlaybackRate(this.pitchSemitones);
-        const newLength = Math.ceil(audioBuf.length / playbackRate);
+        // Do not change length for pitch shift, as tempo remains the same
+        const newLength = audioBuf.length;
 
         // 1. Create the OfflineContext with the calculated new length
         const offlineCtx = new OfflineAudioContext(
@@ -421,7 +428,12 @@ try {
         const source = offlineCtx.createBufferSource();
         source.buffer = audioBuf;
         source.loop = this.sourceElement.loop;
-        source.playbackRate.value = playbackRate; // Apply the static pitch change
+        // Do NOT change playbackRate here to preserve tempo
+
+        // Initialize Jungle for pitch shift
+        const offlineJungle = new Jungle(offlineCtx);
+        const pitchMult = Math.pow(2, this.pitchSemitones / 12) - 1;
+        offlineJungle.setPitchOffset(pitchMult);
 
         // 3. Recreate the effect chain (using current filter settings)
         const filters = this.filters.map(f => {
@@ -439,7 +451,8 @@ const preamp = offlineCtx.createGain();
 preamp.gain.value =Math.pow(5, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20)
 
         // 4. Connect the chain
-        source.connect(filters[0]);
+        source.connect(offlineJungle.input);
+        offlineJungle.output.connect(filters[0]);
         for (let i = 0; i < filters.length - 1; i++) {
             filters[i].connect(filters[i + 1]);
         }
@@ -643,14 +656,7 @@ await this.switchToProcessedAudioMode(processedBuffer, (window as any).lastAudio
 
     // Use only 8-band names (no legacy/overlapping names)
     private static bandMap: { [key: string]: number } = {
-        lowshelf: 0,
-        lowMid: 1,
-        midLow: 2,
-        mid: 3,
-        midHigh: 4,
-        highMid: 5,
-        high: 6,
-        highshelf: 7
+        '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, '11': 11, '12': 12, '13': 13, '14': 14, '15': 15
     };
 
     // Set band gain for any band by name or index
@@ -663,10 +669,7 @@ await this.switchToProcessedAudioMode(processedBuffer, (window as any).lastAudio
             if (idx === undefined) throw new Error(`Unknown band: ${band}`);
         }
         if (this.filters[idx]) {
-            const oldGain = this.filters[idx].gain.value;
-            this.filters[idx].gain.value = gain;
-
-
+            this.filters[idx].gain.setValueAtTime(gain, this.ctx.currentTime);
         } else {
             console.warn(`[Equalizer.setBandGain] Filter at index ${idx} not found`);
         }

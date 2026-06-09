@@ -1,0 +1,101 @@
+.eq-basic-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  color: var(--text);
+  padding: 160px 0 20px 0; /* Increased top padding to push everything down */
+}
+
+.eq-basic-view header {
+  padding: 0 20px;
+}
+
+.eq-bands-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  align-items: stretch;
+  height: 220px;
+  margin-top: 30px;
+  margin-bottom: 30px;
+  overflow-x: auto;
+  padding: 0 20px;
+  /* gap: 15px; */
+  /* Hide scrollbar visually but keep functionality */
+  scrollbar-width: none;
+}
+.eq-bands-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.eq-band-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 23px; /* Lock width so they do not squish together */
+}
+
+.eq-slider-holder {
+  flex-grow: 1;
+  width: 100%;
+  position: relative; /* Crucial for absolute positioning to work */
+}
+
+/* Absolute positioning takes the rotated slider out of the document flow,
+   preventing it from collapsing its parent container or causing weird layout widths */
+.eq-slider-holder input[type="range"] {
+  position: absolute;
+  width: 180px; /* The physical length of the slider */
+  height: 35px; /* The horizontal width of the thumb area */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  margin: 0;
+  color: var(--text);
+}
+
+.eq-band-lbl {
+  font-size: 12px;
+  /* color: var(--text2); */
+  /* margin-top: 15px; */
+  /* height: 20px; */
+  white-space: nowrap;
+}
+
+.eq-pitch-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 20px;
+}
+
+.eq-pitch-header {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.eq-pitch-wrapper input[type="range"] {
+  width: 100%;
+  color: var(--text);
+}
+
+.eq-btn-reset {
+  background: var(--onBg);
+  color: var(--text);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  align-self: flex-start;
+  font-family: inherit;
+  font-size: 14px;
+  margin: 0 20px;
+}
+
+.eq-btn-reset:hover {
+  background: var(--onBg2);
+}

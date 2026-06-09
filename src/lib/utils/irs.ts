@@ -4,7 +4,7 @@ export const IRS_OPTIONS = [
   {
     category: "Joe0Bloggs 3D headphones",
     files: [
-      { name: "Surround Upmix 44.1kHz (WAV)", path: "/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100.wav" },
+      { name: "testeqapo3", path: "/irs/testeqapo3.wav" },
       { name: "Surround Upmix 44.1kHz (IRS)", path: "/irs/Joe0Bloggs 3D headphones IRS--surround upmix-44100_.irs" },
       { name: "Surround Upmix 48kHz (WAV)", path: "/irs/Joe0Bloggs 3D headphones IRS--surround upmix-48000.wav" },
     ],

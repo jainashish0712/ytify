@@ -1,7 +1,7 @@
 /* @refresh reload */
 
 import { For, lazy, onMount, Show } from 'solid-js';
-import { render } from 'solid-js/web';
+import { render, Dynamic } from 'solid-js/web';
 import { themer, syncLibrary } from '@utils';
 import NavBar from '@components/NavBar.tsx';
 import { updateLang, setStore, store, navStore, playerStore } from '@stores';
@@ -33,13 +33,27 @@ export default function App() {
   return (
     <>
       <main>
-        <For each={Object.values(navStore)}>
-          {(item) =>
-            <Show when={item.state}>
-              <item.component />
-            </Show>
-          }
-        </For>
+        <Show when={navStore.queue.state}>
+          <Dynamic component={navStore.queue.component} />
+        </Show>
+        <Show when={navStore.player.state}>
+          <Dynamic component={navStore.player.component} />
+        </Show>
+        <Show when={navStore.search.state}>
+          <Dynamic component={navStore.search.component} />
+        </Show>
+        <Show when={navStore.library.state}>
+          <Dynamic component={navStore.library.component} />
+        </Show>
+        <Show when={navStore.list.state}>
+          <Dynamic component={navStore.list.component} />
+        </Show>
+        <Show when={navStore.settings.state}>
+          <Dynamic component={navStore.settings.component} />
+        </Show>
+        <Show when={navStore.equalizer.state}>
+          <Dynamic component={navStore.equalizer.component} />
+        </Show>
       </main>
       <footer>
         <Show when={!navStore.player.state && playerStore.playbackState !== 'none'}>

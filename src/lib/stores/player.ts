@@ -1,6 +1,7 @@
 import { createRoot, createEffect } from "solid-js";
 import { createStore } from "solid-js/store";
 import { navStore, params, updateParam, addToQueue, queueStore, setQueueStore, setStore, store, groupQueueByAuthor } from "@stores";
+import { setEqualizerStore } from "./equalizerStore";
 import { config, cssVar, themer, addToCollection, player, shuffle } from "@utils";
 import { Equalizer } from './equalizer'; // Import Equalizer
 import { irsStore, validateAndFixIrsState } from "./irs"; // Import irsStore and validation
@@ -164,17 +165,25 @@ createRoot(() => {
   ;
   if (true) {
     ;
-    equalizerInstance.setBandGain('lowshelf', 0);    // neutral lowshelf (40Hz)
-    equalizerInstance.setBandGain('lowMid', 1);      // slight boost low-mid (150Hz)
-    equalizerInstance.setBandGain('midLow', 0);      // neutral mid-low (400Hz)
-    equalizerInstance.setBandGain('mid', 0);         // neutral mid (1000Hz)
-    equalizerInstance.setBandGain('midHigh', 0);     // neutral mid-high (2000Hz)
-    equalizerInstance.setBandGain('highMid', 0);     // neutral high-mid (4000Hz)
-    equalizerInstance.setBandGain('high', -3);       // slight cut high (8000Hz)
-    equalizerInstance.setBandGain('highshelf', -5);  // cut highshelf (16000Hz)
-    equalizerInstance.setPitch(0.41);
-    ;
-    ;
+    equalizerInstance.setBandGain(0, 0);
+    equalizerInstance.setBandGain(1, 0);
+    equalizerInstance.setBandGain(2, 0);
+    equalizerInstance.setBandGain(3, 0);
+    equalizerInstance.setBandGain(4, 0);
+    equalizerInstance.setBandGain(5, 0);
+    equalizerInstance.setBandGain(6, 0);
+    equalizerInstance.setBandGain(7, 0);
+    equalizerInstance.setBandGain(8, 0);
+    equalizerInstance.setBandGain(9, 0);
+    equalizerInstance.setBandGain(10, 0);
+    equalizerInstance.setBandGain(11, 0);
+    equalizerInstance.setBandGain(12, 0);
+    equalizerInstance.setBandGain(13, 0);
+    equalizerInstance.setBandGain(14, 0);
+    equalizerInstance.setBandGain(15, 0);
+    equalizerInstance.setPitch(0);
+    setEqualizerStore('bandGains', equalizerInstance.getBandGains());
+    setEqualizerStore('pitch', equalizerInstance.getPitch());
   }
 
   // Effect to react to IRS selection changes

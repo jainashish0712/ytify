@@ -7,7 +7,7 @@ export let config = {
   discover: true,
   history: true,
   searchBarLinkCapture: true,
-  searchSuggestions: true,
+  searchSuggestions: false,
   saveRecentSearches: true,
   loadImage: true,
   landscapeSections: '2',

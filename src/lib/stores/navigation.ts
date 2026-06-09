@@ -6,6 +6,7 @@ const List = lazy(() => import('@features/List'));
 const Queue = lazy(() => import('@features/Queue'));
 const Player = lazy(() => import('@features/Player'));
 const Settings = lazy(() => import('@features/Settings'));
+const Equalizer = lazy(() => import('@features/Equalizer'));
 
 
 export const params = (new URL(location.href)).searchParams;
@@ -17,13 +18,15 @@ type Nav = { [key in Features]: {
   component: () => JSX.Element
 } }
 
-export const [navStore, setNavStore] = createStore<Nav>({
+export const [navStore, setNavStore] = createStore({
+// export const [navStore, setNavStore] = createStore<Nav>({
   queue: { ref: null, state: false, component: Queue },
   player: { ref: null, state: false, component: Player },
   search: { ref: null, state: false, component: Search },
   library: { ref: null, state: false, component: Library },
   list: { ref: null, state: false, component: List },
   settings: { ref: null, state: false, component: Settings },
+  equalizer: { ref: null, state: false, component: Equalizer },
 });
 
 

@@ -78,13 +78,13 @@ export default async function() {
 
 
 
-  document.addEventListener('click', (e) => {
-    const click = e.target as HTMLElement;
-    const detail = document.querySelector('details:open');
+  // document.addEventListener('click', (e) => {
+  //   const click = e.target as HTMLElement;
+  //   const detail = document.querySelector('details:open');
 
-    if (!detail?.firstElementChild?.contains(click))
-      detail?.removeAttribute('open');
-  });
+  //   if (!detail?.firstElementChild?.contains(click))
+  //     detail?.removeAttribute('open');
+  // });
 
   function toggleTooltip(event: PointerEvent) {
     const t = event.target as HTMLElement;

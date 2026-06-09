@@ -88,9 +88,8 @@ export default function(_: {
             const speed = parseFloat(ref.value);
             setPlayerStore('playbackRate', speed);
 
-            // Apply combined pitch and speed
-              const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
-              playerStore.audio.playbackRate = speed * pitchRate;
+            // Apply speed (tempo only)
+              playerStore.audio.playbackRate = speed;
 
             updatePositionState();
             ref.blur();
