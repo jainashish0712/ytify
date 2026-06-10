@@ -15,7 +15,7 @@ const storeInit: {
   translations: Record<TranslationKeys, string> | {}
 } = {
   api: import.meta.env.DEV ? 'https://api.meq3d.workers.dev' : 'https://api.meq3d.workers.dev',
-  useSaavn: false,
+  useSaavn: true,
   locale: initLocale,
   translations: {},
 };
