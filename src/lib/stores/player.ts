@@ -6,15 +6,16 @@ import { config, cssVar, themer, addToCollection, player, shuffle } from "@utils
 import { Equalizer } from './equalizer'; // Import Equalizer
 import { irsStore, validateAndFixIrsState } from "./irs"; // Import irsStore and validation
 import { getIrsPath } from "../utils/irs";
-// import { getIrsPath } from "@utils/irs"; // Import getIrsPath
+import { silentAudio } from "../utils/silentAudio";
 
 export let equalizerInstance: Equalizer | null = null; // Export equalizerInstance
 
-const blankImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUZCIjCB0C8AAAAASUVORK5CYII=';
+const blankImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhCIjCB0C8AAAAASUVORK5CYII=';
 
 type PlayerStore = {
   stream: TrackItem & { albumId?: string },
   audio: HTMLAudioElement,
+  silentAudio: HTMLAudioElement,
   context: {
     src: Context,
     id: string
@@ -40,6 +41,7 @@ type PlayerStore = {
 
 const createInitialState = (): PlayerStore => ({
   audio: new Audio(),
+  silentAudio: new Audio(silentAudio),
   playbackState: 'none',
   context: { id: '', src: '' },
   status: '',
@@ -139,6 +141,7 @@ createRoot(() => {
   // Add visibilitychange listener to handle iOS background/foreground transitions
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
+      playerStore.silentAudio.pause();
       if (equalizerInstance) {
         equalizerInstance.unlockAudioContext().then(() => {
           // Re-apply pitch/speed on restore
@@ -152,6 +155,11 @@ createRoot(() => {
           }
         });
       }
+    } else {
+        if (playerStore.playbackState === 'playing') {
+            playerStore.silentAudio.loop = true;
+            playerStore.silentAudio.play();
+        }
     }
   });
 
