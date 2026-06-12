@@ -22,7 +22,6 @@ type PlayerStore = {
   }
   currentTime: number,
   fullDuration: number,
-  playbackRate: number,
   loop: boolean,
   volume: number,
   status: string,
@@ -142,11 +141,10 @@ createRoot(() => {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       playerStore.silentAudio.pause();
+      playerStore.audio.muted = false;
       if (equalizerInstance) {
         equalizerInstance.unlockAudioContext().then(() => {
-          // Re-apply pitch/speed on restore
-          // const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
-          // playerStore.audio.playbackRate = pitchRate * playerStore.playbackRate;
+
 
           // Sync playback state: if the app thinks it's playing but the audio element is paused
           // (likely by iOS system), try to resume it.
@@ -159,6 +157,7 @@ createRoot(() => {
         if (playerStore.playbackState === 'playing') {
             playerStore.silentAudio.loop = true;
             playerStore.silentAudio.play();
+            playerStore.audio.muted = true;
         }
     }
   });
@@ -250,9 +249,7 @@ createRoot(() => {
   playerStore.audio.onplaying = () => {
     setPlayerStore('playbackState', 'playing');
 
-    // Re-apply pitch/speed on playing to ensure it's not lost (e.g. by iOS background restore)
-    // const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
-    // playerStore.audio.playbackRate = pitchRate * playerStore.playbackRate;
+
 
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => {
@@ -286,17 +283,7 @@ createRoot(() => {
     clearTimeout(historyTimeoutId);
   };
 
-  // Ensure playbackRate stays consistent with pitch and base speed
-  // playerStore.audio.addEventListener('ratechange', () => {
-  //   if (playerStore.isWatching && !playerStore.isMusic) return;
 
-  //   const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
-  //   const intended = pitchRate * playerStore.playbackRate;
-
-  //   if (Math.abs(playerStore.audio.playbackRate - intended) > 0.001) {
-  //     playerStore.audio.playbackRate = intended;
-  //   }
-  // });
 
   playerStore.audio.addEventListener('loadeddata', themer);
 
@@ -317,9 +304,7 @@ createRoot(() => {
     historyID = playerStore.stream.id;
     clearTimeout(historyTimeoutId);
 
-    // Apply pitch from equalizer if available, otherwise use default playbackRate
-    // const pitchRate = equalizerInstance ? equalizerInstance.getPlaybackRate() : 1;
-    // playerStore.audio.playbackRate = pitchRate * playerStore.playbackRate;
+
   }
 
   playerStore.audio.onwaiting = () => {

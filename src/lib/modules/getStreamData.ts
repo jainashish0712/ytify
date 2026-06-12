@@ -67,5 +67,5 @@ export default async function(
     }
   }
 
-  return { error: 'All proxies failed', message: 'Failed to fetch stream data from all available instances' };
+  // return { error: 'All proxies failed', message: 'Failed to fetch stream data from all available instances' };
 }

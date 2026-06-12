@@ -1,4 +1,5 @@
 import { Jungle } from '../modules/jungle.js';
+import { SoundTouch } from 'soundtouchjs';
 
 // --- Equalizer.ts ---
 // This class manages audio equalization and pitch shifting, supporting both
@@ -11,6 +12,8 @@ export class Equalizer {
     private convolver: ConvolverNode;
     private preamp: GainNode;
     private jungle: any; // Pitch shifter node
+    private soundtouch: any;
+    private stNode: ScriptProcessorNode | null = null;
     private irBuffer: AudioBuffer | null = null;
     private cachedAudioBuffer: AudioBuffer | null = null;
     private originalAudioSrc: string = ''; // New: Stores the initial audio URL
@@ -20,7 +23,7 @@ export class Equalizer {
     private mediaSourceNode: MediaElementAudioSourceNode | null = null;
     public gainNode: GainNode | null = null; // Made public
 
-    private pitchSemitones: number = 0.41; // Using your configured default
+    private pitchSemitones: number = 0; // Using your configured default
 
     constructor(audio: HTMLAudioElement) {
         // const { index, invidious } = store.api;
@@ -74,7 +77,7 @@ export class Equalizer {
 
         this.convolver = this.ctx.createConvolver();
         this.preamp = this.ctx.createGain();
-        this.preamp.gain.value = 1; // Changed from 5 to 1 for debugging
+        this.preamp.gain.value = 6; // Changed from 5 to 1 for debugging
 
 
         this.gainNode = this.ctx.createGain(); // Initialize the gainNode
@@ -87,6 +90,38 @@ export class Equalizer {
         });
 
         this.jungle = new Jungle(this.ctx);
+
+        this.soundtouch = new SoundTouch();
+        this.stNode = this.ctx.createScriptProcessor(4096, 2, 2);
+        this.stNode.onaudioprocess = (e) => {
+            const inputL = e.inputBuffer.getChannelData(0);
+            const inputR = e.inputBuffer.getChannelData(1);
+            const outputL = e.outputBuffer.getChannelData(0);
+            const outputR = e.outputBuffer.getChannelData(1);
+            const frames = inputL.length;
+            const interleaved = new Float32Array(frames * 2);
+            for (let i = 0; i < frames; i++) {
+                interleaved[i * 2] = inputL[i];
+                interleaved[i * 2 + 1] = inputR[i];
+            }
+            this.soundtouch.inputBuffer.putSamples(interleaved, 0, frames);
+            this.soundtouch.process();
+            
+            const outFrames = this.soundtouch.outputBuffer.frameCount;
+            const framesToExtract = Math.min(frames, outFrames);
+            const outInterleaved = new Float32Array(framesToExtract * 2);
+            if (framesToExtract > 0) {
+                this.soundtouch.outputBuffer.receiveSamples(outInterleaved, framesToExtract);
+            }
+            for (let i = 0; i < framesToExtract; i++) {
+                outputL[i] = outInterleaved[i * 2];
+                outputR[i] = outInterleaved[i * 2 + 1];
+            }
+            for (let i = framesToExtract; i < frames; i++) {
+                outputL[i] = 0;
+                outputR[i] = 0;
+            }
+        };
     }
 
     /** Setup automatic AudioContext unlock on first user gesture or audio play */
@@ -128,8 +163,11 @@ export class Equalizer {
 
                 // Connect the graph immediately after creating mediaSourceNode
 
-                this.mediaSourceNode.connect(this.jungle.input);
-                this.jungle.output.connect(this.preamp);
+                // Keeping jungle aside:
+                // this.mediaSourceNode.connect(this.jungle.input);
+                // this.jungle.output.connect(this.preamp);
+                this.mediaSourceNode.connect(this.stNode!);
+                this.stNode!.connect(this.preamp);
 
                 this.preamp.connect(this.filters[0]);
 
@@ -205,9 +243,13 @@ export class Equalizer {
         this.pitchSemitones = semitones;
 
         const pitchMult = Math.pow(2, semitones / 12) - 1;
-        
+
         if (this.jungle) {
             this.jungle.setPitchOffset(pitchMult);
+        }
+
+        if (this.soundtouch) {
+            this.soundtouch.pitch = this.semitonesToPlaybackRate(semitones);
         }
 
         if (!this.realtimeEnabled) {
@@ -387,8 +429,12 @@ try {
 
 
         // Reconnect with convolver in the chain
-        this.mediaSourceNode.connect(this.jungle.input);
-        this.jungle.output.connect(this.preamp);
+        // Keeping jungle aside:
+        // this.mediaSourceNode.connect(this.jungle.input);
+        // this.jungle.output.connect(this.preamp);
+        this.mediaSourceNode.connect(this.stNode!);
+        this.stNode!.connect(this.preamp);
+
         this.preamp.connect(this.filters[0]);
         for (let i = 0; i < this.filters.length - 1; i++) {
             this.filters[i].connect(this.filters[i + 1]);
