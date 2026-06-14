@@ -47,14 +47,28 @@ export default function Equalizer() {
     }
   };
 
+  const handleReverbChange = (key: 'time' | 'decay' | 'mix', e: Event) => {
+    const value = parseFloat((e.target as HTMLInputElement).value);
+    setEqualizerStore('reverb', key, value);
+    if (equalizerInstance) {
+      if (key === 'time') equalizerInstance.setReverbTime(value);
+      else if (key === 'decay') equalizerInstance.setReverbDecay(value);
+      else if (key === 'mix') equalizerInstance.setReverbMix(value);
+    }
+  };
+
   const resetEQ = () => {
     setEqualizerStore('bandGains', Array(16).fill(0));
     setEqualizerStore('pitch', 0);
+    setEqualizerStore('reverb', { time: 0.01, decay: 0.01, mix: 0 });
     if (equalizerInstance) {
       for (let i = 0; i < 16; i++) {
         equalizerInstance.setBandGain(i, 0);
       }
       equalizerInstance.setPitch(0);
+      equalizerInstance.setReverbTime(0.01);
+      equalizerInstance.setReverbDecay(0.01);
+      equalizerInstance.setReverbMix(0);
     }
   };
 
@@ -64,42 +78,86 @@ export default function Equalizer() {
         <p>Equalizer</p>
       </header>
 
-      <div class="eq-bands-wrapper">
-        <For each={bands}>
-          {(band, i) => (
-            <div class="eq-band-col">
-              <div class="eq-slider-holder">
-                <input
-                  type="range"
-                  min="-12"
-                  max="12"
-                  step="0.1"
-                  value={equalizerStore.bandGains[i()]}
-                  onInput={(e) => handleGainChange(i(), e)}
-                />
+      <div class="eq-scroll-container">
+        <div class="eq-bands-wrapper">
+          <For each={bands}>
+            {(band, i) => (
+              <div class="eq-band-col">
+                <div class="eq-slider-holder">
+                  <input
+                    type="range"
+                    min="-12"
+                    max="12"
+                    step="0.1"
+                    value={equalizerStore.bandGains[i()]}
+                    onInput={(e) => handleGainChange(i(), e)}
+                  />
+                </div>
+                <span class="eq-band-lbl">{band.label}</span>
               </div>
-              <span class="eq-band-lbl">{band.label}</span>
-            </div>
-          )}
-        </For>
-      </div>
-
-      <div class="eq-pitch-wrapper">
-        <div class="eq-pitch-header">
-          <span>Pitch Shift</span>
-          <span>{equalizerStore.pitch.toFixed(2)} st</span>
+            )}
+          </For>
         </div>
-        <input
-          type="range"
-          min="-12"
-          max="12"
-          step="0.01"
-          value={equalizerStore.pitch}
-          onInput={handlePitchChange}
-        />
-      </div>
 
-      <button class="eq-btn-reset" onClick={resetEQ}>Reset Defaults</button>
+        <div class="eq-pitch-wrapper">
+          <div class="eq-pitch-header">
+            <span>Pitch Shift</span>
+            <span>{equalizerStore.pitch.toFixed(2)} st</span>
+          </div>
+          <input
+            type="range"
+            min="-12"
+            max="12"
+            step="0.01"
+            value={equalizerStore.pitch}
+            onInput={handlePitchChange}
+          />
+        </div>
+
+        <div class="eq-reverb-wrapper">
+          <div class="eq-reverb-header">
+            <span>Reverb</span>
+          </div>
+          
+          <div class="eq-reverb-row">
+            <span>Time: {equalizerStore.reverb.time.toFixed(2)}s</span>
+            <input
+              type="range"
+              min="0.01"
+              max="3"
+              step="0.01"
+              value={equalizerStore.reverb.time}
+              onInput={(e) => handleReverbChange('time', e)}
+            />
+          </div>
+
+          <div class="eq-reverb-row">
+            <span>Decay: {equalizerStore.reverb.decay.toFixed(2)}s</span>
+            <input
+              type="range"
+              min="0.01"
+              max="3"
+              step="0.01"
+              value={equalizerStore.reverb.decay}
+              onInput={(e) => handleReverbChange('decay', e)}
+            />
+          </div>
+
+          <div class="eq-reverb-row">
+            <span>Mix: {equalizerStore.reverb.mix.toFixed(2)}</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={equalizerStore.reverb.mix}
+              onInput={(e) => handleReverbChange('mix', e)}
+            />
+          </div>
+        </div>
+
+        <button class="eq-btn-reset" onClick={resetEQ}>Reset Defaults</button>
+      </div>
     </section>
   );
 }

@@ -189,8 +189,12 @@ createRoot(() => {
     equalizerInstance.setBandGain(14, 0);
     equalizerInstance.setBandGain(15, 0);
     equalizerInstance.setPitch(0);
+    equalizerInstance.setReverbTime(0.01);
+    equalizerInstance.setReverbDecay(0.01);
+    equalizerInstance.setReverbMix(0);
     setEqualizerStore('bandGains', equalizerInstance.getBandGains());
     setEqualizerStore('pitch', equalizerInstance.getPitch());
+    setEqualizerStore('reverb', { time: 0.01, decay: 0.01, mix: 0 });
   }
 
   // Effect to react to IRS selection changes

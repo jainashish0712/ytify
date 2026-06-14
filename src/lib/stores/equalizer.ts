@@ -10,6 +10,13 @@ export class Equalizer {
 
     private filters: BiquadFilterNode[];
     private convolver: ConvolverNode;
+    private reverbNode: ConvolverNode;
+    private reverbWetGain: GainNode;
+    private reverbDryGain: GainNode;
+    private reverbTime: number = 0.01;
+    private reverbDecay: number = 0.01;
+    private reverbMix: number = 0;
+    private lpfNode: BiquadFilterNode;
     private preamp: GainNode;
     private jungle: any; // Pitch shifter node
     private soundtouch: any;
@@ -122,6 +129,13 @@ export class Equalizer {
                 outputR[i] = 0;
             }
         };
+
+        this.reverbNode = this.ctx.createConvolver();
+        this.reverbWetGain = this.ctx.createGain();
+        this.reverbDryGain = this.ctx.createGain();
+        this.reverbWetGain.gain.value = 0;
+        this.reverbDryGain.gain.value = 1;
+        this.buildReverbImpulse();
     }
 
     /** Setup automatic AudioContext unlock on first user gesture or audio play */
@@ -162,71 +176,25 @@ export class Equalizer {
 
 
                 // Connect the graph immediately after creating mediaSourceNode
-
-                // Keeping jungle aside:
-                // this.mediaSourceNode.connect(this.jungle.input);
-                // this.jungle.output.connect(this.preamp);
-                this.mediaSourceNode.connect(this.stNode!);
-                this.stNode!.connect(this.preamp);
-
-                this.preamp.connect(this.filters[0]);
-
-                for (let i = 0; i < this.filters.length - 1; i++) {
-                    this.filters[i].connect(this.filters[i + 1]);
-
-                }
-
-
-                if (this.irBuffer && this.convolver.buffer) {
-                    // If impulse response is loaded, include convolver
-
-                    this.filters[this.filters.length - 1].connect(this.convolver);
-
-                    this.convolver.connect(this.gainNode!);
-
-                } else {
-                    // Otherwise, bypass convolver
-
-                    this.filters[this.filters.length - 1].connect(this.gainNode!);
-
-                }
-                this.gainNode!.connect(this.ctx.destination);
-
-
-
-            } else {
-
+                this.reconnectAudioGraph();
             }
-
-
-
-
-
-
-
-
-
-
-
         } else {
             // Disable real-time processing
 
             if (this.mediaSourceNode) {
 
                 // Disconnect the graph
-                this.mediaSourceNode.disconnect(this.preamp);
-                this.preamp.disconnect(this.filters[0]);
-                for (let i = 0; i < this.filters.length - 1; i++) {
-                    this.filters[i].disconnect(this.filters[i + 1]);
+                this.mediaSourceNode.disconnect();
+                this.stNode?.disconnect();
+                this.preamp.disconnect();
+                for (let i = 0; i < this.filters.length; i++) {
+                    this.filters[i].disconnect();
                 }
-
-                if (this.irBuffer && this.convolver.buffer) {
-                    this.filters[this.filters.length - 1].disconnect(this.convolver);
-                    this.convolver.disconnect(this.gainNode!);
-                } else {
-                    this.filters[this.filters.length - 1].disconnect(this.gainNode!);
-                }
-                this.gainNode!.disconnect(this.ctx.destination);
+                this.convolver.disconnect();
+                this.reverbNode.disconnect();
+                this.reverbWetGain.disconnect();
+                this.reverbDryGain.disconnect();
+                this.gainNode!.disconnect();
 
             }
 
@@ -268,6 +236,39 @@ export class Equalizer {
     }
     public resetPitch(): void { this.setPitch(0); }
     // --- END PITCH METHODS ---
+
+    // --- REVERB METHODS ---
+    private buildReverbImpulse(): void {
+        const length = this.ctx.sampleRate * this.reverbTime;
+        const impulse = this.ctx.createBuffer(2, length, this.ctx.sampleRate);
+        const left = impulse.getChannelData(0);
+        const right = impulse.getChannelData(1);
+        const decay = this.reverbDecay;
+
+        for (let i = 0; i < length; i++) {
+            left[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+            right[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+        }
+
+        this.reverbNode.buffer = impulse;
+    }
+
+    public setReverbTime(time: number): void {
+        this.reverbTime = time;
+        this.buildReverbImpulse();
+    }
+
+    public setReverbDecay(decay: number): void {
+        this.reverbDecay = decay;
+        this.buildReverbImpulse();
+    }
+
+    public setReverbMix(mix: number): void {
+        this.reverbMix = mix;
+        this.reverbDryGain.gain.setValueAtTime(1 - mix, this.ctx.currentTime);
+        this.reverbWetGain.gain.setValueAtTime(mix, this.ctx.currentTime);
+    }
+    // --- END REVERB METHODS ---
 
     // --- UTILITY METHODS (Keep these as-is) ---
     private isIOSorSafari(): boolean { /* ... logic as before ... */
@@ -425,6 +426,9 @@ try {
             this.filters[i].disconnect();
         }
         this.convolver.disconnect();
+        this.reverbNode.disconnect();
+        this.reverbWetGain.disconnect();
+        this.reverbDryGain.disconnect();
         this.gainNode!.disconnect();
 
 
@@ -439,9 +443,24 @@ try {
         for (let i = 0; i < this.filters.length - 1; i++) {
             this.filters[i].connect(this.filters[i + 1]);
         }
-        // Always include convolver now that IR is loaded
-        this.filters[this.filters.length - 1].connect(this.convolver);
-        this.convolver.connect(this.gainNode!);
+
+        const lastFilter = this.filters[this.filters.length - 1];
+
+        // Reverb chain
+        lastFilter.connect(this.reverbDryGain);
+        lastFilter.connect(this.reverbNode);
+        this.reverbNode.connect(this.reverbWetGain);
+
+        // Next node in chain (IRS Convolver or GainNode)
+        const nextNode = (this.irBuffer && this.convolver.buffer) ? this.convolver : this.gainNode!;
+        
+        this.reverbDryGain.connect(nextNode);
+        this.reverbWetGain.connect(nextNode);
+
+        if (nextNode === this.convolver) {
+            this.convolver.connect(this.gainNode!);
+        }
+
         this.gainNode!.connect(this.ctx.destination);
 
     }
