@@ -10,6 +10,8 @@ export default function(_: {
 }) {
 
   const [isPointed, setPointed] = createSignal(params.has('t'));
+  const [isVocalProcessing, setVocalProcessing] = createSignal(false);
+  const [vocalVolume, setVocalVolumeSignal] = createSignal(1.0);
   let slider!: HTMLInputElement;
 
 
@@ -22,6 +24,17 @@ export default function(_: {
   function updatePositionState() {
     if ('mediaSession' in navigator)
       import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
+  }
+
+  function toggleVocalProcessing() {
+    const newState = !isVocalProcessing();
+    setVocalProcessing(newState);
+    if (equalizerInstance) {
+      if (newState) {
+        equalizerInstance.enableRealtimeProcessing(true);
+      }
+      equalizerInstance.setVocalReductionActive(newState);
+    }
   }
 
   return (
@@ -41,6 +54,26 @@ export default function(_: {
           <p id="fullDuration">{convertSStoHHMMSS(playerStore.fullDuration)}</p>
         </div>
       </span>
+
+      <Show when={isVocalProcessing()}>
+        <span class="slider vocal-slider" style={{ "margin-top": "10px" }}>
+          <label style={{ "font-size": "12px", "color": "var(--text)", "margin-bottom": "4px", "display": "block", "opacity": "0.8" }}>Vocal Volume</label>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={vocalVolume()}
+            oninput={(e) => {
+              const vol = parseFloat(e.target.value);
+              setVocalVolumeSignal(vol);
+              if (equalizerInstance) {
+                equalizerInstance.setVocalVolume(vol);
+              }
+            }}
+          />
+        </span>
+      </Show>
 
       <div class="mainShelf">
 
@@ -185,6 +218,28 @@ export default function(_: {
           <option value="1">100%</option>
         </select>
 
+      </div>
+
+      <div style={{ "display": "flex", "justify-content": "center", "margin-top": "15px", "margin-bottom": "15px" }}>
+        <button
+          onclick={toggleVocalProcessing}
+          style={{
+            "background": isVocalProcessing() ? "var(--theme)" : "var(--surface)",
+            "color": isVocalProcessing() ? "var(--theme-text)" : "var(--text)",
+            "padding": "8px 16px",
+            "border-radius": "20px",
+            "font-size": "14px",
+            "cursor": "pointer",
+            "border": "1px solid var(--border)",
+            "display": "flex",
+            "align-items": "center",
+            "gap": "6px",
+            "transition": "all 0.2s ease"
+          }}
+        >
+          <i class="ri-mic-line"></i>
+          {isVocalProcessing() ? "Vocal Reduction On" : "Vocal Reduction Off"}
+        </button>
       </div>
 
     </>

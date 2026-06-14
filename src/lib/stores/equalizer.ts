@@ -30,6 +30,17 @@ export class Equalizer {
     private mediaSourceNode: MediaElementAudioSourceNode | null = null;
     public gainNode: GainNode | null = null; // Made public
 
+    public vocalReductionActive: boolean = false;
+    public vocalVolume: number = 1.0;
+    private vocalSplitter: ChannelSplitterNode | null = null;
+    private vocalMerger: ChannelMergerNode | null = null;
+    private vocalInvertGain: GainNode | null = null;
+    private vocalSumNode: GainNode | null = null;
+    public vocalOriginalGainNode: GainNode | null = null;
+    public vocalReductionGainNode: GainNode | null = null;
+    public vocalInputNode: GainNode | null = null;
+    public vocalOutputNode: GainNode | null = null;
+
     private pitchSemitones: number = 0; // Using your configured default
 
     constructor(audio: HTMLAudioElement) {
@@ -86,6 +97,22 @@ export class Equalizer {
         this.preamp = this.ctx.createGain();
         this.preamp.gain.value = 6; // Changed from 5 to 1 for debugging
 
+        // Vocal Reduction Setup
+        this.vocalInputNode = this.ctx.createGain();
+        this.vocalOutputNode = this.ctx.createGain();
+        this.vocalSplitter = this.ctx.createChannelSplitter(2);
+        this.vocalMerger = this.ctx.createChannelMerger(2);
+        
+        this.vocalInvertGain = this.ctx.createGain();
+        this.vocalInvertGain.gain.value = -1; // Invert phase of right channel
+        
+        this.vocalSumNode = this.ctx.createGain();
+        
+        this.vocalOriginalGainNode = this.ctx.createGain();
+        this.vocalOriginalGainNode.gain.value = 1.0; // Start with original signal
+        
+        this.vocalReductionGainNode = this.ctx.createGain();
+        this.vocalReductionGainNode.gain.value = 0.0; // Start with no reduction signal
 
         this.gainNode = this.ctx.createGain(); // Initialize the gainNode
 
@@ -206,6 +233,28 @@ export class Equalizer {
 
         }
     }
+
+    // --- VOCAL REDUCTION METHODS ---
+    public setVocalReductionActive(active: boolean): void {
+        this.vocalReductionActive = active;
+        if (active) {
+            this.setVocalVolume(this.vocalVolume);
+        } else {
+            if (this.vocalOriginalGainNode && this.vocalReductionGainNode) {
+                this.vocalOriginalGainNode.gain.setValueAtTime(1.0, this.ctx.currentTime);
+                this.vocalReductionGainNode.gain.setValueAtTime(0.0, this.ctx.currentTime);
+            }
+        }
+    }
+
+    public setVocalVolume(volume: number): void {
+        this.vocalVolume = Math.max(0, Math.min(1, volume)); // Clamp between 0 and 1
+        if (this.vocalReductionActive && this.vocalOriginalGainNode && this.vocalReductionGainNode) {
+            this.vocalOriginalGainNode.gain.setValueAtTime(this.vocalVolume, this.ctx.currentTime);
+            this.vocalReductionGainNode.gain.setValueAtTime(1.0 - this.vocalVolume, this.ctx.currentTime);
+        }
+    }
+    // --- END VOCAL REDUCTION METHODS ---
 
     // --- PITCH METHODS ---
     private semitonesToPlaybackRate(semitones: number): number {
@@ -436,6 +485,15 @@ try {
 
         // Disconnect everything
         this.mediaSourceNode.disconnect();
+        this.vocalInputNode!.disconnect();
+        this.vocalSplitter!.disconnect();
+        this.vocalInvertGain!.disconnect();
+        this.vocalSumNode!.disconnect();
+        this.vocalMerger!.disconnect();
+        this.vocalOriginalGainNode!.disconnect();
+        this.vocalReductionGainNode!.disconnect();
+        this.vocalOutputNode!.disconnect();
+        this.stNode?.disconnect();
         this.preamp.disconnect();
         for (let i = 0; i < this.filters.length; i++) {
             this.filters[i].disconnect();
@@ -449,10 +507,24 @@ try {
 
 
         // Reconnect with convolver in the chain
-        // Keeping jungle aside:
-        // this.mediaSourceNode.connect(this.jungle.input);
-        // this.jungle.output.connect(this.preamp);
-        this.mediaSourceNode.connect(this.stNode!);
+        // Vocal reduction circuit
+        this.mediaSourceNode.connect(this.vocalInputNode!);
+        this.vocalInputNode!.connect(this.vocalSplitter!);
+        this.vocalInputNode!.connect(this.vocalOriginalGainNode!);
+        
+        this.vocalSplitter!.connect(this.vocalSumNode!, 0); // L
+        this.vocalSplitter!.connect(this.vocalInvertGain!, 1); // R
+        this.vocalInvertGain!.connect(this.vocalSumNode!); // L - R
+        
+        this.vocalSumNode!.connect(this.vocalMerger!, 0, 0);
+        this.vocalSumNode!.connect(this.vocalMerger!, 0, 1);
+        
+        this.vocalMerger!.connect(this.vocalReductionGainNode!);
+        
+        this.vocalOriginalGainNode!.connect(this.vocalOutputNode!);
+        this.vocalReductionGainNode!.connect(this.vocalOutputNode!);
+
+        this.vocalOutputNode!.connect(this.stNode!);
         this.stNode!.connect(this.preamp);
 
         this.preamp.connect(this.filters[0]);
