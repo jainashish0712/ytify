@@ -57,10 +57,20 @@ export default function Equalizer() {
     }
   };
 
+  const handleLPFChange = (key: 'frequency' | 'peak', e: Event) => {
+    const value = parseFloat((e.target as HTMLInputElement).value);
+    setEqualizerStore('lpf', key, value);
+    if (equalizerInstance) {
+      if (key === 'frequency') equalizerInstance.setLPFFrequency(value);
+      else if (key === 'peak') equalizerInstance.setLPFPeak(value);
+    }
+  };
+
   const resetEQ = () => {
     setEqualizerStore('bandGains', Array(16).fill(0));
     setEqualizerStore('pitch', 0);
     setEqualizerStore('reverb', { time: 0.01, decay: 0.01, mix: 0 });
+    setEqualizerStore('lpf', { frequency: 22050, peak: 1 });
     if (equalizerInstance) {
       for (let i = 0; i < 16; i++) {
         equalizerInstance.setBandGain(i, 0);
@@ -69,6 +79,8 @@ export default function Equalizer() {
       equalizerInstance.setReverbTime(0.01);
       equalizerInstance.setReverbDecay(0.01);
       equalizerInstance.setReverbMix(0);
+      equalizerInstance.setLPFFrequency(22050);
+      equalizerInstance.setLPFPeak(1);
     }
   };
 
@@ -152,6 +164,36 @@ export default function Equalizer() {
               step="0.01"
               value={equalizerStore.reverb.mix}
               onInput={(e) => handleReverbChange('mix', e)}
+            />
+          </div>
+        </div>
+
+        <div class="eq-lpf-wrapper">
+          <div class="eq-lpf-header">
+            <span>Low-Pass Filter</span>
+          </div>
+          
+          <div class="eq-lpf-row">
+            <span>Frequency: {equalizerStore.lpf.frequency.toFixed(0)}Hz</span>
+            <input
+              type="range"
+              min="10"
+              max="22050"
+              step="1"
+              value={equalizerStore.lpf.frequency}
+              onInput={(e) => handleLPFChange('frequency', e)}
+            />
+          </div>
+
+          <div class="eq-lpf-row">
+            <span>Peak: {equalizerStore.lpf.peak.toFixed(2)}</span>
+            <input
+              type="range"
+              min="0.0001"
+              max="20"
+              step="0.01"
+              value={equalizerStore.lpf.peak}
+              onInput={(e) => handleLPFChange('peak', e)}
             />
           </div>
         </div>

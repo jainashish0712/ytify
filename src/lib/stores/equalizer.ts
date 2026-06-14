@@ -136,6 +136,11 @@ export class Equalizer {
         this.reverbWetGain.gain.value = 0;
         this.reverbDryGain.gain.value = 1;
         this.buildReverbImpulse();
+
+        this.lpfNode = this.ctx.createBiquadFilter();
+        this.lpfNode.type = 'lowpass';
+        this.lpfNode.frequency.value = 22050;
+        this.lpfNode.Q.value = 1;
     }
 
     /** Setup automatic AudioContext unlock on first user gesture or audio play */
@@ -269,6 +274,16 @@ export class Equalizer {
         this.reverbWetGain.gain.setValueAtTime(mix, this.ctx.currentTime);
     }
     // --- END REVERB METHODS ---
+
+    // --- LPF METHODS ---
+    public setLPFFrequency(freq: number): void {
+        this.lpfNode.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    }
+
+    public setLPFPeak(peak: number): void {
+        this.lpfNode.Q.setValueAtTime(peak, this.ctx.currentTime);
+    }
+    // --- END LPF METHODS ---
 
     // --- UTILITY METHODS (Keep these as-is) ---
     private isIOSorSafari(): boolean { /* ... logic as before ... */
@@ -429,6 +444,7 @@ try {
         this.reverbNode.disconnect();
         this.reverbWetGain.disconnect();
         this.reverbDryGain.disconnect();
+        this.lpfNode.disconnect();
         this.gainNode!.disconnect();
 
 
@@ -445,10 +461,11 @@ try {
         }
 
         const lastFilter = this.filters[this.filters.length - 1];
+        lastFilter.connect(this.lpfNode);
 
-        // Reverb chain
-        lastFilter.connect(this.reverbDryGain);
-        lastFilter.connect(this.reverbNode);
+        // Reverb chain (now connected after LPF)
+        this.lpfNode.connect(this.reverbDryGain);
+        this.lpfNode.connect(this.reverbNode);
         this.reverbNode.connect(this.reverbWetGain);
 
         // Next node in chain (IRS Convolver or GainNode)

@@ -4,16 +4,18 @@
   height: 100%;
   overflow: hidden; /* Changed from auto to hidden */
   color: var(--text);
-  padding: 160px 0 20px 0; /* Increased top padding to push everything down */
+  /* Increased top padding to push everything down */
+  /* padding: 160px 0 20px 0; */
 }
 
 .eq-scroll-container {
-  display: flex;
+  /* display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1; */
   overflow-y: auto;
   overflow-x: hidden;
   padding-bottom: 40px;
+  /* border: 10px solid red */
 }
 
 .eq-basic-view header {
@@ -135,5 +137,33 @@
 }
 
 .eq-reverb-row input[type="range"] {
+  width: 100%;
+}
+
+.eq-lpf-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 20px 20px;
+  padding-bottom: 20px;
+}
+
+.eq-lpf-header {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.eq-lpf-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.eq-lpf-row span {
+  font-size: 13px;
+}
+
+.eq-lpf-row input[type="range"] {
   width: 100%;
 }

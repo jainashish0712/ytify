@@ -192,9 +192,12 @@ createRoot(() => {
     equalizerInstance.setReverbTime(0.01);
     equalizerInstance.setReverbDecay(0.01);
     equalizerInstance.setReverbMix(0);
+    equalizerInstance.setLPFFrequency(22050);
+    equalizerInstance.setLPFPeak(1);
     setEqualizerStore('bandGains', equalizerInstance.getBandGains());
     setEqualizerStore('pitch', equalizerInstance.getPitch());
     setEqualizerStore('reverb', { time: 0.01, decay: 0.01, mix: 0 });
+    setEqualizerStore('lpf', { frequency: 22050, peak: 1 });
   }
 
   // Effect to react to IRS selection changes
