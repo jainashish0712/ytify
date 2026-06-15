@@ -21,23 +21,25 @@ export default function() {
 
   let touchStartY = 0;
 
-  onMount(() => {
-    setNavStore('player', 'ref', playerSection);
-    playerSection.scrollIntoView();
+  // onMount(() => {
+  //   setNavStore('player', 'ref', playerSection);
+  //   playerSection.scrollIntoView();
 
-    playerSection.addEventListener('touchstart', (e) => {
-      touchStartY = e.touches[0].clientY;
-    }, { passive: true });
+  //   playerSection.addEventListener('touchstart', (e) => {
+  //     touchStartY = e.touches[0].clientY;
+  //   }, { passive: true });
 
-    playerSection.addEventListener('touchmove', (e) => {
-      const touchY = e.touches[0].clientY;
-      const deltaY = touchY - touchStartY;
+  //   playerSection.addEventListener('touchmove', (e) => {
+  //     const touchY = e.touches[0].clientY;
+  //     const deltaY = touchY - touchStartY;
+  //     console.log("35",touchY,deltaY);
 
-      if (deltaY > 50 && playerSection.scrollTop <= 0) {
-        closeFeature('player');
-      }
-    }, { passive: true });
-  });
+  //     if (touchY > 700 && deltaY > 50 && playerSection.scrollTop <= 1000) {
+  //       console.log("38",);
+  //       closeFeature('player');
+  //     }
+  //   }, { passive: true });
+  // });
 
   createEffect(() => {
     if (playerStore.stream.id)

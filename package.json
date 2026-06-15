@@ -8,9 +8,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "nouislider": "^15.8.1",
     "solid-js": "1.9.12",
     "solid-sortablejs": "^2.1.8",
-    "sortablejs": "^1.15.7"
+    "sortablejs": "^1.15.7",
+    "soundtouchjs": "^0.3.0"
   },
   "overrides": {
     "@rollup/plugin-terser": "1.0.0"
@@ -21,6 +23,7 @@
     "@netlify/edge-functions": "^3.0.6",
     "@netlify/functions": "^5.2.0",
     "@types/node": "^25.6.0",
+    "@types/nouislider": "^9.0.10",
     "@types/sortablejs": "^1.15.9",
     "autoprefixer": "^10.4.27",
     "eruda": "^3.4.3",

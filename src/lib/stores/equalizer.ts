@@ -95,22 +95,22 @@ export class Equalizer {
 
         this.convolver = this.ctx.createConvolver();
         this.preamp = this.ctx.createGain();
-        this.preamp.gain.value = 6; // Changed from 5 to 1 for debugging
+        this.preamp.gain.value = 3; // Changed from 5 to 1 for debugging
 
         // Vocal Reduction Setup
         this.vocalInputNode = this.ctx.createGain();
         this.vocalOutputNode = this.ctx.createGain();
         this.vocalSplitter = this.ctx.createChannelSplitter(2);
         this.vocalMerger = this.ctx.createChannelMerger(2);
-        
+
         this.vocalInvertGain = this.ctx.createGain();
         this.vocalInvertGain.gain.value = -1; // Invert phase of right channel
-        
+
         this.vocalSumNode = this.ctx.createGain();
-        
+
         this.vocalOriginalGainNode = this.ctx.createGain();
         this.vocalOriginalGainNode.gain.value = 1.0; // Start with original signal
-        
+
         this.vocalReductionGainNode = this.ctx.createGain();
         this.vocalReductionGainNode.gain.value = 0.0; // Start with no reduction signal
 
@@ -140,7 +140,7 @@ export class Equalizer {
             }
             this.soundtouch.inputBuffer.putSamples(interleaved, 0, frames);
             this.soundtouch.process();
-            
+
             const outFrames = this.soundtouch.outputBuffer.frameCount;
             const framesToExtract = Math.min(frames, outFrames);
             const outInterleaved = new Float32Array(framesToExtract * 2);
@@ -511,16 +511,16 @@ try {
         this.mediaSourceNode.connect(this.vocalInputNode!);
         this.vocalInputNode!.connect(this.vocalSplitter!);
         this.vocalInputNode!.connect(this.vocalOriginalGainNode!);
-        
+
         this.vocalSplitter!.connect(this.vocalSumNode!, 0); // L
         this.vocalSplitter!.connect(this.vocalInvertGain!, 1); // R
         this.vocalInvertGain!.connect(this.vocalSumNode!); // L - R
-        
+
         this.vocalSumNode!.connect(this.vocalMerger!, 0, 0);
         this.vocalSumNode!.connect(this.vocalMerger!, 0, 1);
-        
+
         this.vocalMerger!.connect(this.vocalReductionGainNode!);
-        
+
         this.vocalOriginalGainNode!.connect(this.vocalOutputNode!);
         this.vocalReductionGainNode!.connect(this.vocalOutputNode!);
 
@@ -542,7 +542,7 @@ try {
 
         // Next node in chain (IRS Convolver or GainNode)
         const nextNode = (this.irBuffer && this.convolver.buffer) ? this.convolver : this.gainNode!;
-        
+
         this.reverbDryGain.connect(nextNode);
         this.reverbWetGain.connect(nextNode);
 
@@ -602,7 +602,7 @@ try {
         const convolver = offlineCtx.createConvolver();
         convolver.buffer = this.irBuffer; // Use the loaded IR
 const preamp = offlineCtx.createGain();
-preamp.gain.value =Math.pow(5, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20)
+preamp.gain.value =Math.pow(3, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20)
 
         // 4. Connect the chain
         source.connect(offlineJungle.input);

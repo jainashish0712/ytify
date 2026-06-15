@@ -34,7 +34,7 @@ export async function player(id?: string) {
       fullDuration: data.lengthSeconds
     });
   else {
-    const errorData = data as Record<'error' | 'message', string>;
+    const errorData = data as Record<'error' | 'message', string> ||"";
     setPlayerStore({
       playbackState: 'none',
       status: errorData.message || errorData.error || 'Loading Audio Failed'

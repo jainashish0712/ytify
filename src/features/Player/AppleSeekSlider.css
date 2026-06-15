@@ -1,0 +1,77 @@
+.apple-player {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  /* Increase hit area for the entire track */
+  padding-top: 16px;
+  padding-bottom: 16px;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.apple-slider {
+  height: 0.6rem;
+  width: 100%;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  transition: transform 400ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  transform-origin: center;
+}
+
+/* Background of the entire track */
+.apple-slider.noUi-target {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  border: none;
+  box-shadow: none;
+}
+
+/* The filled part of the track (left side) */
+.apple-slider .noUi-connect {
+  background: var(--theme, hsl(from white h s l / 0.7));
+}
+
+.apple-slider .noUi-base,
+.apple-slider .noUi-connects {
+  height: 100%;
+  border-radius: 4px;
+}
+
+.apple-slider .noUi-origin {
+  transition: none; /* we animate with JS/CSS for thumb only */
+}
+
+/* The thumb handle - hidden visually but kept for noUiSlider logic */
+.apple-slider .noUi-handle {
+  width: 1px;
+  height: 100%;
+  background: transparent;
+  box-shadow: none;
+  border: none;
+  cursor: pointer;
+  right: 0 !important;
+}
+
+.apple-slider .noUi-handle::before,
+.apple-slider .noUi-handle::after {
+  display: none;
+}
+
+.apple-tooltip {
+  position: absolute;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  border-radius: 6px;
+  transform-origin: center bottom;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms;
+  font-size: 13px;
+  transform: translateX(-50%);
+  z-index: 10;
+}

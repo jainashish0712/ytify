@@ -1,8 +1,10 @@
 import { LikeButton, PlayButton, PlayNextButton } from "@components/MediaPartials";
-import { params, playerStore, playPrev, queueStore, setPlayerStore, updateParam, t } from "@stores";
+import { params, playerStore, playPrev, queueStore, setPlayerStore, updateParam, t, closeFeature, setNavStore } from "@stores";
 import { equalizerInstance } from '../../lib/stores/player'; // Direct relative import
 import { convertSStoHHMMSS, setConfig } from "@utils";
 import { Accessor, createSignal, onMount, Setter, Show } from "solid-js";
+import { AppleSeekSlider } from "./AppleSeekSlider";
+import { IRS_OPTIONS } from "../../lib/utils/irs";
 
 export default function(_: {
   showLyrics: Accessor<boolean>,
@@ -37,8 +39,40 @@ export default function(_: {
     }
   }
 
+
+    let bottomShelf!: HTMLDivElement;
+
+    const [showLyrics, setShowLyrics] = createSignal(false);
+    const [availableIrsFiles, setAvailableIrsFiles] = createSignal(IRS_OPTIONS[0].files);
+
+    let touchStartY = 0;
+
+    onMount(() => {
+      setNavStore('player', 'ref', bottomShelf);
+      bottomShelf.scrollIntoView();
+
+      bottomShelf.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+
+      bottomShelf.addEventListener('touchmove', (e) => {
+        const touchY = e.touches[0].clientY;
+        const deltaY = touchY - touchStartY;
+        console.log("61",touchY,deltaY);
+
+        if (
+          // touchY > 700 &&
+           deltaY > 50 && bottomShelf.scrollTop <= 100) {
+          console.log("66",);
+          closeFeature('player');
+        }
+      }, { passive: true });
+    });
   return (
     <>
+      <div style={{ "margin-bottom": "20px" }}>
+        <AppleSeekSlider />
+      </div>
       <span class="slider">
         <input
           type="range"
@@ -91,7 +125,7 @@ export default function(_: {
           class="ri-replay-15-line"
           id="seekBwdButton"
           onclick={() => {
-            playerStore.audio.currentTime -= 15;
+            playerStore.audio.currentTime -= 5;
           }}
         ></button>
 
@@ -102,7 +136,7 @@ export default function(_: {
           class="ri-forward-15-line"
           id="seekFwdButton"
           onclick={() => {
-            playerStore.audio.currentTime += 15;
+            playerStore.audio.currentTime += 5;
           }}
         ></button>
         <Show when={queueStore.list.length}>
@@ -111,7 +145,9 @@ export default function(_: {
 
       </div>
 
-      <div class="bottomShelf">
+      <div class="bottomShelf"
+      ref={bottomShelf}>
+
 
         <select
           id="playSpeed"
@@ -220,7 +256,7 @@ export default function(_: {
 
       </div>
 
-      <div style={{ "display": "flex", "justify-content": "center", "margin-top": "15px", "margin-bottom": "15px" }}>
+      <div style={{ "display": "flex", "justify-content": "center", "margin-top": "0px", "margin-bottom": "15px" }}>
         <button
           onclick={toggleVocalProcessing}
           style={{

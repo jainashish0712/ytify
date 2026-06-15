@@ -183,7 +183,7 @@
 
 .mainShelf {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-evenly;
 
   :first-child {
     animation: var(--animation-slide-in-down) forwards;
@@ -210,7 +210,8 @@
   display: flex;
   justify-content: space-between;
   margin-top: var(--size-5);
-  margin-bottom: var(--size-9);
+  /* margin-bottom: var(--size-9); */
+  height: 3rem;
 
   i {
     font-size: var(--font-size-2) !important;
