@@ -6,7 +6,6 @@ import { config, cssVar, themer, addToCollection, player, shuffle } from "@utils
 import { Equalizer } from './equalizer'; // Import Equalizer
 import { irsStore, validateAndFixIrsState } from "./irs"; // Import irsStore and validation
 import { getIrsPath } from "../utils/irs";
-import { silentAudio } from "../utils/silentAudio";
 
 export let equalizerInstance: Equalizer | null = null; // Export equalizerInstance
 
@@ -15,7 +14,6 @@ const blankImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhCIjCB0C8AAAAASUVORK
 type PlayerStore = {
   stream: TrackItem & { albumId?: string },
   audio: HTMLAudioElement,
-  silentAudio: HTMLAudioElement,
   context: {
     src: Context,
     id: string
@@ -40,7 +38,6 @@ type PlayerStore = {
 
 const createInitialState = (): PlayerStore => ({
   audio: new Audio(),
-  silentAudio: new Audio(silentAudio),
   playbackState: 'none',
   context: { id: '', src: '' },
   status: '',
@@ -140,8 +137,6 @@ createRoot(() => {
   // Add visibilitychange listener to handle iOS background/foreground transitions
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      playerStore.silentAudio.pause();
-      playerStore.audio.muted = false;
       if (equalizerInstance) {
         equalizerInstance.unlockAudioContext().then(() => {
 
@@ -153,12 +148,6 @@ createRoot(() => {
           }
         });
       }
-    } else {
-        if (playerStore.playbackState === 'playing') {
-            playerStore.silentAudio.loop = true;
-            playerStore.silentAudio.play();
-            playerStore.audio.muted = true;
-        }
     }
   });
 

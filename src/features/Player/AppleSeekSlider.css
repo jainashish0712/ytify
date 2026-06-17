@@ -32,7 +32,8 @@
 
 /* The filled part of the track (left side) */
 .apple-slider .noUi-connect {
-  background: var(--theme, hsl(from white h s l / 0.7));
+  /* background: var(--theme, hsl(from white h s l / 0.7)); */
+  background: hsl(from rgb(255, 255, 255) h s l / 0) !important;
 }
 
 .apple-slider .noUi-base,

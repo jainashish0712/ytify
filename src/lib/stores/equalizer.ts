@@ -17,6 +17,7 @@ export class Equalizer {
     private reverbDecay: number = 0.01;
     private reverbMix: number = 0;
     private lpfNode: BiquadFilterNode;
+    private lpfMakeupGain: GainNode;
     private preamp: GainNode;
     private jungle: any; // Pitch shifter node
     private soundtouch: any;
@@ -121,13 +122,21 @@ export class Equalizer {
         audio.addEventListener('play', () => {
 
             this.unlockAudioContext();
+            if (this.outputAudioElement && this.outputAudioElement.paused) {
+                this.outputAudioElement.play().catch(e => console.warn('Failed to play bridge audio', e));
+            }
+        });
+        audio.addEventListener('pause', () => {
+            if (this.outputAudioElement && !this.outputAudioElement.paused) {
+                this.outputAudioElement.pause();
+            }
         });
 
         this.jungle = new Jungle(this.ctx);
 
         this.soundtouch = new SoundTouch();
         this.stNode = this.ctx.createScriptProcessor(4096, 2, 2);
-        this.stNode.onaudioprocess = (e) => {
+        this.stNode.onaudioprocess = (e: any) => {
             const inputL = e.inputBuffer.getChannelData(0);
             const inputR = e.inputBuffer.getChannelData(1);
             const outputL = e.outputBuffer.getChannelData(0);
@@ -168,6 +177,7 @@ export class Equalizer {
         this.lpfNode.type = 'lowpass';
         this.lpfNode.frequency.value = 22050;
         this.lpfNode.Q.value = 1;
+        this.lpfMakeupGain = this.ctx.createGain();
     }
 
     /** Setup automatic AudioContext unlock on first user gesture or audio play */
@@ -226,7 +236,17 @@ export class Equalizer {
                 this.reverbNode.disconnect();
                 this.reverbWetGain.disconnect();
                 this.reverbDryGain.disconnect();
-                this.gainNode!.disconnect();
+                this.lpfNode.disconnect();
+                this.lpfMakeupGain.disconnect();
+
+                if (this.outputStreamDest) {
+                    this.gainNode!.disconnect(this.outputStreamDest);
+                    if (this.outputAudioElement) {
+                        this.outputAudioElement.pause();
+                    }
+                } else {
+                    this.gainNode!.disconnect(this.ctx.destination);
+                }
 
             }
 
@@ -327,6 +347,23 @@ export class Equalizer {
     // --- LPF METHODS ---
     public setLPFFrequency(freq: number): void {
         this.lpfNode.frequency.setValueAtTime(freq, this.ctx.currentTime);
+    
+        const minFreq = 10;
+        const maxFreq = 22050;
+        const minGain = 1.0;
+        const maxGain = 3.0; // ~9.5 dB boost
+
+        const logMin = Math.log(minFreq);
+        const logMax = Math.log(maxFreq);
+
+        // Clamp freq to be safe
+        const clampedFreq = Math.max(minFreq, Math.min(maxFreq, freq));
+
+        const normFreq = (Math.log(clampedFreq) - logMin) / (logMax - logMin);
+
+        const gain = maxGain - (normFreq * (maxGain - minGain));
+
+        this.lpfMakeupGain.gain.setValueAtTime(gain, this.ctx.currentTime);
     }
 
     public setLPFPeak(peak: number): void {
@@ -503,6 +540,7 @@ try {
         this.reverbWetGain.disconnect();
         this.reverbDryGain.disconnect();
         this.lpfNode.disconnect();
+        this.lpfMakeupGain.disconnect();
         this.gainNode!.disconnect();
 
 
@@ -534,10 +572,11 @@ try {
 
         const lastFilter = this.filters[this.filters.length - 1];
         lastFilter.connect(this.lpfNode);
+        this.lpfNode.connect(this.lpfMakeupGain);
 
         // Reverb chain (now connected after LPF)
-        this.lpfNode.connect(this.reverbDryGain);
-        this.lpfNode.connect(this.reverbNode);
+        this.lpfMakeupGain.connect(this.reverbDryGain);
+        this.lpfMakeupGain.connect(this.reverbNode);
         this.reverbNode.connect(this.reverbWetGain);
 
         // Next node in chain (IRS Convolver or GainNode)
@@ -550,7 +589,22 @@ try {
             this.convolver.connect(this.gainNode!);
         }
 
-        this.gainNode!.connect(this.ctx.destination);
+        // iOS Safari Background Workaround: Bridge via MediaStreamDestination
+        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        if (isSafari) {
+            if (!this.outputStreamDest) {
+                this.outputStreamDest = this.ctx.createMediaStreamDestination();
+            }
+            if (!this.outputAudioElement) {
+                this.outputAudioElement = new Audio();
+                this.outputAudioElement.srcObject = this.outputStreamDest.stream;
+                this.outputAudioElement.setAttribute('playsinline', '');
+                // Play happens via the main audio 'play' event listener
+            }
+            this.gainNode!.connect(this.outputStreamDest);
+        } else {
+            this.gainNode!.connect(this.ctx.destination);
+        }
 
     }
 
