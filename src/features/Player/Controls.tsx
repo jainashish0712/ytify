@@ -1,6 +1,7 @@
 import { LikeButton, PlayButton, PlayNextButton } from "@components/MediaPartials";
 import { params, playerStore, playPrev, queueStore, setPlayerStore, updateParam, t, closeFeature, setNavStore } from "@stores";
 import { equalizerInstance } from '../../lib/stores/player'; // Direct relative import
+import { NumSlider } from '@components/NumSlider';
 import { convertSStoHHMMSS, setConfig } from "@utils";
 import { Accessor, createSignal, onMount, Setter, Show } from "solid-js";
 import { AppleSeekSlider } from "./AppleSeekSlider";
@@ -19,7 +20,7 @@ export default function(_: {
 
   onMount(() => {
     ['touchstart', 'touchmove', 'touchend'].forEach(type => {
-      slider.addEventListener(type, (e) => e.stopPropagation());
+      slider?.addEventListener(type, (e) => e.stopPropagation());
     });
   })
 
@@ -73,21 +74,19 @@ export default function(_: {
       <div style={{ "margin-bottom": "20px" }}>
         <AppleSeekSlider />
       </div>
-      <span class="slider">
-        <input
-          type="range"
-          value={playerStore.currentTime}
-          max={playerStore.fullDuration}
-          ref={slider}
-          onchange={(e) => {
-            playerStore.audio.currentTime = parseInt(e.target.value);
-          }}
-        />
-        <div>
-          <p id="currentDuration">{convertSStoHHMMSS(playerStore.currentTime)}</p>
-          <p id="fullDuration">{convertSStoHHMMSS(playerStore.fullDuration)}</p>
-        </div>
-      </span>
+      <NumSlider
+        min={0}
+        max={playerStore.fullDuration}
+        value={playerStore.currentTime}
+        onValueChange={(value) => {
+          playerStore.audio.currentTime = value;
+        }}
+        suffix=""
+      />
+      <div style={{"display": "flex", "justify-content": "space-between"}}>
+        <p id="currentDuration">{convertSStoHHMMSS(playerStore.currentTime)}</p>
+        <p id="fullDuration">{convertSStoHHMMSS(playerStore.fullDuration)}</p>
+      </div>
 
       <Show when={isVocalProcessing()}>
         <span class="slider vocal-slider" style={{ "margin-top": "10px" }}>

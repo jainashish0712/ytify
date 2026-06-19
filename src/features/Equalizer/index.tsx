@@ -3,6 +3,7 @@ import './Equalizer.css';
 import '../Player/slider.css';
 import { equalizerInstance } from '../../lib/stores/player';
 import { equalizerStore, setEqualizerStore, setNavStore } from '../../lib/stores';
+import { NumSlider } from '@components/NumSlider';
 
 const bands = [
   { freq: 40, label: '40' },
@@ -30,14 +31,6 @@ export default function Equalizer() {
   onMount(() => {
     setNavStore('equalizer', 'ref', equalizerRef);
   });
-
-  const handlePitchChange = (e: Event) => {
-    const value = parseFloat((e.target as HTMLInputElement).value);
-    setEqualizerStore('pitch', value);
-    if (equalizerInstance) {
-      equalizerInstance.setPitch(value);
-    }
-  };
 
   const handleGainChange = (index: number, e: Event) => {
     const value = parseFloat((e.target as HTMLInputElement).value);
@@ -116,13 +109,17 @@ export default function Equalizer() {
             <span>Pitch Shift</span>
             <span>{equalizerStore.pitch.toFixed(2)} st</span>
           </div>
-          <input
-            type="range"
-            min="-4"
-            max="4"
-            step="0.1"
+          <NumSlider
+            min={-4}
+            max={4}
             value={equalizerStore.pitch}
-            onInput={handlePitchChange}
+            suffix=" st"
+            onValueChange={(val) => {
+                setEqualizerStore('pitch', val);
+                if (equalizerInstance) {
+                    equalizerInstance.setPitch(val);
+                }
+            }}
           />
         </div>
 

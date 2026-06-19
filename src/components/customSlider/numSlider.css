@@ -1,0 +1,176 @@
+:root {
+    /* vars */
+}
+
+.num-slider-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.num-slider-container {
+
+    --range-slider: light-dark( hsl(212, 22%, 86%), hsl(212, 16%, 10%) );
+    --range-bar: light-dark( hsl(212, 30%, 95%), hsl(212, 16%, 32%) );
+    --range-range-inactive: var(--range-bar);
+    --range-range: var(--range-bar);
+    --range-nub: light-dark( hsl(212, 15%, 60%), hsl(212, 16%, 10%) );
+    --range-handle-inactive: var(--range-nub);
+    --range-handle: var(--range-nub);
+    --range-pip: light-dark( hsl(212, 15%, 40%), hsl(212, 12%, 80%) );
+    --flow-text: light-dark( hsl(212, 20%, 34%), hsl(212, 15%, 80%) );
+
+    --track-padding: 3px;
+    /* --handle-padding: 1em; */
+
+    & .num-slider {
+        /* background: var(--range-slider); */
+        /* padding: var(--track-padding);
+        padding-inline: calc(var(--handle-padding) + var(--track-padding)); */
+        /* border-radius: 0.5em;
+        margin-bottom: 1em; */
+    }
+
+    & .rangeSlider {
+        /* height: 2.75em; */
+        border-radius: 0.5em;
+        margin: 0;
+    }
+
+    & .rangeSlider::before {
+        /* this is just to make the end padding click-able */
+        content: "";
+        position: absolute;
+        inset: 0;
+        left: auto;
+        right: calc(var(--handle-padding) * -1);
+        width: var(--handle-padding);
+        z-index: 1;
+        border-radius: inherit;
+    }
+
+    & .rangeBar {
+        --padding: calc(var(--handle-padding) - ((var(--range-size) / 100 * var(--handle-padding))));
+
+        width: calc(
+            var(--handle-padding) + var(--handle-padding) + var(--slider-length) *
+                (var(--range-size) / 100 * 1px)
+        );
+        padding-left: var(--padding);
+        margin-left: calc(var(--handle-padding) * -1);
+
+        height: inherit;
+        top: 0;
+        border-radius: calc( 0.5em - var(--track-padding) );
+        box-shadow:
+            inset 0 1px 1px hsl( from var(--range-bar) h s calc(l + 5) ),
+            0 1px 0 1px hsl( from var(--range-bar) h 10% calc(l - 50) / 0.2 ),
+            0 1px 3px hsl( from var(--range-bar) h 20% calc(l - 25) / 0.1 ),
+            0 3px 6px hsl( from var(--range-bar) h 20% calc(l - 35) / 0.1 ),
+            0 4px 8px hsl( from var(--range-bar) h 20% calc(l - 40) / 0.1 );
+    }
+
+    & .rangeLimit {
+        display: none;
+    }
+
+    & .rangeHandle {
+        width: calc(var(--handle-padding) * 2);
+        height: 100%;
+        top: 0;
+        right: 100%;
+        transform: translateX(50%);
+        &::before {
+            display: none;
+        }
+    }
+
+    & .rangeNub {
+        width: 2px;
+        height: 40%;
+        top: 50%;
+        left: calc( 50% - 2px);
+        transform: translate(-50%, -50%);
+        background: var(--range-nub);
+        border-radius: 99vh;
+        opacity: 0.5;
+
+        &::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: inherit;
+            translate: 5px 0;
+            border-radius: inherit;
+        }
+    }
+
+    & .rangeHandle:hover .rangeNub,
+    & .rangeHandle.rsActive .rangeNub {
+        opacity: 1;
+    }
+
+    & .rsPip {
+        font-family: "Jersey 10", monospace;
+        font-size: 1.2em;
+        display: none;
+        background: transparent;
+        opacity: 0.5;
+
+        &[data-val="5"],
+        &[data-val="60"] {
+            display: block;
+        }
+        &[data-val="5"] {
+            left: 0!important;
+        }
+
+        &.rsSelected {
+            opacity: 1;
+        }
+
+        &.rsSelected,
+        &:hover {
+            & .rsPipVal {
+                font-weight: normal;
+            }
+        }
+    }
+
+    & .rsPipVal {
+        top: 0;
+        gap: 0.25em;
+        transform: none;
+        color: var(--range-pip);
+        left: calc(var(--handle-padding) * -1);
+    }
+
+    & [data-val="60"] .rsPipVal {
+        right: calc(var(--handle-padding) * -1 );
+        left: auto;
+    }
+}
+
+number-flow {
+    --offset: calc(var(--handle-padding)/2);
+
+    font-family: "Jersey 10", monospace;
+    font-size: 1.4em;
+    font-variant: tabular-nums;
+    color: var(--flow-text);
+    position: absolute;
+    top: 50%;
+    z-index: 10;
+    translate: calc((var(--slider-length) * (var(--handle-pos) / 100) * 1px) + var(--offset)) -50%;
+    transition: translate 0.15s var(--cubic-out), opacity 0.5s var(--cubic-out) 0.15s;
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
+
+    &.on-left {
+        --offset: calc(-100% - var(--track-padding) * 2 - var(--handle-padding) * 2);
+    }
+
+    &.initialised {
+        opacity: 1;
+    }
+}
