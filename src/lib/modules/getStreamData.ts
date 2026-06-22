@@ -1,11 +1,11 @@
 import { playerStore, setPlayerStore } from '@stores';
 
 const instances = [
-  "https://yt.omada.cafe",
-  "https://lekker.gay"
+  "https://lekker.gay",
+  "https://yt.omada.cafe"
 ];
 
-export default async function(
+export default async function (
   id: string,
   prefetch: boolean = false,
   signal?: AbortSignal

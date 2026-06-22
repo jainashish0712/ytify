@@ -118,9 +118,9 @@ export default function Equalizer() {
           </div>
           <input
             type="range"
-            min="-12"
-            max="12"
-            step="0.01"
+            min="-5"
+            max="5"
+            step="0.1"
             value={equalizerStore.pitch}
             onInput={handlePitchChange}
           />
@@ -130,7 +130,7 @@ export default function Equalizer() {
           <div class="eq-reverb-header">
             <span>Reverb</span>
           </div>
-          
+
           <div class="eq-reverb-row">
             <span>Time: {equalizerStore.reverb.time.toFixed(2)}s</span>
             <input
@@ -147,9 +147,9 @@ export default function Equalizer() {
             <span>Decay: {equalizerStore.reverb.decay.toFixed(2)}s</span>
             <input
               type="range"
-              min="0.01"
-              max="3"
-              step="0.01"
+              min="1"
+              max="5"
+              step="0.1"
               value={equalizerStore.reverb.decay}
               onInput={(e) => handleReverbChange('decay', e)}
             />
@@ -161,7 +161,7 @@ export default function Equalizer() {
               type="range"
               min="0"
               max="1"
-              step="0.01"
+              step="0.02"
               value={equalizerStore.reverb.mix}
               onInput={(e) => handleReverbChange('mix', e)}
             />
@@ -172,14 +172,14 @@ export default function Equalizer() {
           <div class="eq-lpf-header">
             <span>Low-Pass Filter</span>
           </div>
-          
+
           <div class="eq-lpf-row">
             <span>Frequency: {equalizerStore.lpf.frequency.toFixed(0)}Hz</span>
             <input
               type="range"
               min="10"
               max="22050"
-              step="1"
+              step="20"
               value={equalizerStore.lpf.frequency}
               onInput={(e) => handleLPFChange('frequency', e)}
             />
@@ -189,9 +189,9 @@ export default function Equalizer() {
             <span>Peak: {equalizerStore.lpf.peak.toFixed(2)}</span>
             <input
               type="range"
-              min="0.0001"
+              min="1"
               max="20"
-              step="0.01"
+              step="0.1"
               value={equalizerStore.lpf.peak}
               onInput={(e) => handleLPFChange('peak', e)}
             />

@@ -4,8 +4,6 @@ import { navStore, params, updateParam, addToQueue, queueStore, setQueueStore, s
 import { setEqualizerStore } from "./equalizerStore";
 import { config, cssVar, themer, addToCollection, player, shuffle } from "@utils";
 import { Equalizer } from './equalizer'; // Import Equalizer
-import { irsStore, validateAndFixIrsState } from "./irs"; // Import irsStore and validation
-import { getIrsPath } from "../utils/irs";
 import { silentAudio } from "../utils/silentAudio";
 
 export let equalizerInstance: Equalizer | null = null; // Export equalizerInstance
@@ -200,34 +198,7 @@ createRoot(() => {
     setEqualizerStore('lpf', { frequency: 22050, peak: 1 });
   }
 
-  // Effect to react to IRS selection changes
-  createEffect(() => {
-    // Validate and fix any state mismatches before proceeding
-    validateAndFixIrsState();
 
-    const selectedCategory = irsStore.selectedCategory;
-    const selectedFile = irsStore.selectedFile;
-    const newIrsPath = getIrsPath(selectedCategory, selectedFile);
-
-    if (true && newIrsPath) {
-      ;
-      ;
-      equalizerInstance.loadImpulseResponse(encodeURI(newIrsPath))
-        .then(() => {
-          ;
-          ;
-          equalizerInstance.debugAudioChain();
-        })
-        .catch(e => {
-          console.error("[player.ts] === DYNAMIC IMPULSE RESPONSE LOAD FAILED ===", e);
-          console.error(`[player.ts] IR ${newIrsPath} will NOT be applied to audio`);
-          equalizerInstance.debugAudioChain();
-        });
-    } else if (true && !newIrsPath) {
-      console.warn(`[player.ts] No valid IRS path ${newIrsPath} for selected options. IR will not be applied.`);
-      // Optionally, you might want to disable the convolver or load a "null" IR here.
-    }
-  });
 
   // Expose debug function globally for testing
   (window as any).debugAudioChain = () => {
@@ -311,7 +282,10 @@ createRoot(() => {
     historyID = playerStore.stream.id;
     clearTimeout(historyTimeoutId);
 
-
+    // iOS Safari Equalizer Workaround
+    if (equalizerInstance) {
+        equalizerInstance.reloadForIOSBug();
+    }
   }
 
   playerStore.audio.onwaiting = () => {

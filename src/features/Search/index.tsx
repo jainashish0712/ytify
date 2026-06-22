@@ -51,7 +51,9 @@ export default function() {
         <Filters />
       </form>
 
-      <Show when={searchStore.query || searchStore.results.length > 0} fallback={<About />}>
+      <Show when={searchStore.query || searchStore.results.length > 0}
+      //  fallback={<About />}
+       >
         <Results />
       </Show>
     </section>

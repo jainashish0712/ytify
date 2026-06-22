@@ -9,7 +9,6 @@ export class Equalizer {
     private sourceElement: HTMLAudioElement;
 
     private filters: BiquadFilterNode[];
-    private convolver: ConvolverNode;
     private reverbNode: ConvolverNode;
     private reverbWetGain: GainNode;
     private reverbDryGain: GainNode;
@@ -21,7 +20,6 @@ export class Equalizer {
     private jungle: any; // Pitch shifter node
     private soundtouch: any;
     private stNode: ScriptProcessorNode | null = null;
-    private irBuffer: AudioBuffer | null = null;
     private cachedAudioBuffer: AudioBuffer | null = null;
     private originalAudioSrc: string = ''; // New: Stores the initial audio URL
     public processedAudioUrl: string | null = null; // New: Stores the Object URL of the processed WAV
@@ -93,7 +91,6 @@ export class Equalizer {
             this.filters[i].Q.value = 1;
         }
 
-        this.convolver = this.ctx.createConvolver();
         this.preamp = this.ctx.createGain();
         this.preamp.gain.value = 6; // Changed from 5 to 1 for debugging
 
@@ -222,7 +219,6 @@ export class Equalizer {
                 for (let i = 0; i < this.filters.length; i++) {
                     this.filters[i].disconnect();
                 }
-                this.convolver.disconnect();
                 this.reverbNode.disconnect();
                 this.reverbWetGain.disconnect();
                 this.reverbDryGain.disconnect();
@@ -342,6 +338,23 @@ export class Equalizer {
         return isIOS || isSafari;
     }
     public requiresUserGesture(): boolean { return this.isIOSorSafari(); }
+
+    public reloadForIOSBug(): void {
+        if (!this.requiresUserGesture() || !this.mediaSourceNode) return;
+        
+        // On iOS Safari, changing the src of an audio element often breaks the MediaElementAudioSourceNode's connection.
+        // Reconnecting it forces Safari to re-evaluate the audio routing.
+        try {
+            this.mediaSourceNode.disconnect();
+            this.reconnectAudioGraph();
+            if (this.ctx.state !== 'running') {
+                this.ctx.resume().catch(() => {});
+            }
+        } catch (e) {
+            console.warn('[Equalizer] reloadForIOSBug failed', e);
+        }
+    }
+
     public isContextRunning(): boolean { return this.ctx.state === 'running'; }
     public async unlockAudioContext(): Promise<void> { /* ... logic as before ... */
         if (this.ctx.state === 'running') {
@@ -419,63 +432,7 @@ try {
 }
     }
 
-    /** Load IR file, decode, store buffer */
-    public async loadImpulseResponse(url: string) {
-
-
-        await this.unlockAudioContext();
-        try {
-            const resp = await fetch(url);
-            if (!resp.ok) {
-                throw new Error(`IR Fetch failed with status: ${resp.status} for URL: ${url}`);
-            }
-
-            const arrayBuffer = await resp.arrayBuffer();
-
-            const buf = await this.ctx.decodeAudioData(arrayBuffer);
-
-            // Downmix logic (mono -> stereo, N -> stereo) as before...
-            let irToUse: AudioBuffer = buf;
-            const ch = buf.numberOfChannels;
-            if (ch === 1) { /* ... mono to stereo logic ... */
-                const stereo = this.ctx.createBuffer(2, buf.length, buf.sampleRate);
-                const data = buf.getChannelData(0);
-                stereo.getChannelData(0).set(data);
-                stereo.getChannelData(1).set(data);
-                irToUse = stereo;
-            } else if (ch > 2) { /* ... N to stereo logic ... */
-                const stereo = this.ctx.createBuffer(2, buf.length, buf.sampleRate);
-                const left = stereo.getChannelData(0);
-                const right = stereo.getChannelData(1);
-                const evenCount = Math.ceil(ch / 2);
-                const oddCount = Math.floor(ch / 2);
-                for (let i = 0; i < buf.length; i++) { left[i] = 0; right[i] = 0; }
-                for (let c = 0; c < ch; c++) {
-                    const src = buf.getChannelData(c);
-                    if ((c % 2) === 0) {
-                        for (let i = 0; i < buf.length; i++) left[i] += src[i] / evenCount;
-                    } else {
-                        for (let i = 0; i < buf.length; i++) right[i] += src[i] / oddCount;
-                    }
-                }
-                irToUse = stereo;
-            }
-            this.irBuffer = irToUse;
-            this.convolver.buffer = irToUse;
-
-
-            // If real-time processing is enabled, reconnect the graph to include convolver
-            if (this.realtimeEnabled && this.mediaSourceNode) {
-
-                this.reconnectAudioGraph();
-            }
-        } catch (err) {
-            console.error("[Equalizer.loadImpulseResponse] decodeAudioData failed for IR:", err);
-            throw err;
-        }
-    }
-
-    /** Reconnect audio graph to include/exclude convolver after IR load */
+    /** Reconnect audio graph */
     private reconnectAudioGraph(): void {
         if (!this.mediaSourceNode) {
 
@@ -498,7 +455,6 @@ try {
         for (let i = 0; i < this.filters.length; i++) {
             this.filters[i].disconnect();
         }
-        this.convolver.disconnect();
         this.reverbNode.disconnect();
         this.reverbWetGain.disconnect();
         this.reverbDryGain.disconnect();
@@ -506,7 +462,6 @@ try {
         this.gainNode!.disconnect();
 
 
-        // Reconnect with convolver in the chain
         // Vocal reduction circuit
         this.mediaSourceNode.connect(this.vocalInputNode!);
         this.vocalInputNode!.connect(this.vocalSplitter!);
@@ -540,15 +495,8 @@ try {
         this.lpfNode.connect(this.reverbNode);
         this.reverbNode.connect(this.reverbWetGain);
 
-        // Next node in chain (IRS Convolver or GainNode)
-        const nextNode = (this.irBuffer && this.convolver.buffer) ? this.convolver : this.gainNode!;
-        
-        this.reverbDryGain.connect(nextNode);
-        this.reverbWetGain.connect(nextNode);
-
-        if (nextNode === this.convolver) {
-            this.convolver.connect(this.gainNode!);
-        }
+        this.reverbDryGain.connect(this.gainNode!);
+        this.reverbWetGain.connect(this.gainNode!);
 
         this.gainNode!.connect(this.ctx.destination);
 
@@ -557,12 +505,12 @@ try {
     // NOTE: enableConvolver is REMOVED/Obsolete.
 
     /**
-     * Renders the entire audio file through the EQ, Pitch, and Convolver pipeline offline.
+     * Renders the entire audio file through the EQ and Pitch pipeline offline.
      */
     private async renderAudioOffline(): Promise<AudioBuffer> {
         await this.prepareAudioBuffer();
-        if (!this.cachedAudioBuffer || !this.irBuffer) {
-            throw new Error("Missing audio buffer or impulse response for offline render.");
+        if (!this.cachedAudioBuffer) {
+            throw new Error("Missing audio buffer for offline render.");
         }
 
         const audioBuf = this.cachedAudioBuffer;
@@ -599,10 +547,8 @@ try {
             return clone;
         });
 
-        const convolver = offlineCtx.createConvolver();
-        convolver.buffer = this.irBuffer; // Use the loaded IR
-const preamp = offlineCtx.createGain();
-preamp.gain.value =Math.pow(5, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20)
+        const preamp = offlineCtx.createGain();
+        preamp.gain.value = Math.pow(5, 12 / 20); // Try 1 instead of Math.pow(10, 12 / 20)
 
         // 4. Connect the chain
         source.connect(offlineJungle.input);
@@ -611,8 +557,7 @@ preamp.gain.value =Math.pow(5, 12 / 20) // Try 1 instead of Math.pow(10, 12 / 20
             filters[i].connect(filters[i + 1]);
         }
         filters[filters.length - 1].connect(preamp);
-        preamp.connect(convolver);
-        convolver.connect(offlineCtx.destination);
+        preamp.connect(offlineCtx.destination);
 
         // 5. Start source and render
         source.start(0);
