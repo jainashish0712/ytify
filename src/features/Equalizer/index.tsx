@@ -88,7 +88,7 @@ export default function Equalizer() {
     setEqualizerStore('pitch', 0);
     setEqualizerStore('reverb', { time: 0.01, decay: 0.01, mix: 0 });
     setEqualizerStore('lpf', { frequency: 22050, peak: 1 });
-    setEqualizerStore('convolver', { impulse: '/irs/testeqapo3.wav', mix: 0 });
+    setEqualizerStore('convolver', { impulse: '/irs/testeqapo3.wav', mix: 1 });
     if (equalizerInstance) {
       for (let i = 0; i < 16; i++) {
         equalizerInstance.setBandGain(i, 0);
@@ -99,7 +99,7 @@ export default function Equalizer() {
       equalizerInstance.setReverbMix(0);
       equalizerInstance.setLPFFrequency(22050);
       equalizerInstance.setLPFPeak(1);
-      equalizerInstance.setConvolverMix(0);
+      equalizerInstance.setConvolverMix(1);
       equalizerInstance.setConvolverImpulse('/irs/testeqapo3.wav');
     }
   };
@@ -192,7 +192,7 @@ export default function Equalizer() {
           <div class="eq-convolver-header">
             <span>Convolver</span>
           </div>
-          
+
           <div class="eq-convolver-row">
             <span>Impulse URL:</span>
             <select
