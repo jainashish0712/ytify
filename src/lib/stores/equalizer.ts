@@ -21,6 +21,13 @@ export class Equalizer {
     private soundtouch: any;
     private stNode: ScriptProcessorNode | null = null;
     private cachedAudioBuffer: AudioBuffer | null = null;
+    
+    // Convolver properties
+    private convolverNode: ConvolverNode;
+    private convolverWetGain: GainNode;
+    private convolverDryGain: GainNode;
+    private convolverInputNode: GainNode;
+    private convolverMix: number = 0;
     private originalAudioSrc: string = ''; // New: Stores the initial audio URL
     public processedAudioUrl: string | null = null; // New: Stores the Object URL of the processed WAV
 
@@ -161,6 +168,13 @@ export class Equalizer {
         this.reverbDryGain.gain.value = 1;
         this.buildReverbImpulse();
 
+        this.convolverNode = this.ctx.createConvolver();
+        this.convolverWetGain = this.ctx.createGain();
+        this.convolverDryGain = this.ctx.createGain();
+        this.convolverInputNode = this.ctx.createGain();
+        this.convolverWetGain.gain.value = 0;
+        this.convolverDryGain.gain.value = 1;
+
         this.lpfNode = this.ctx.createBiquadFilter();
         this.lpfNode.type = 'lowpass';
         this.lpfNode.frequency.value = 22050;
@@ -222,6 +236,10 @@ export class Equalizer {
                 this.reverbNode.disconnect();
                 this.reverbWetGain.disconnect();
                 this.reverbDryGain.disconnect();
+                this.convolverInputNode.disconnect();
+                this.convolverNode.disconnect();
+                this.convolverWetGain.disconnect();
+                this.convolverDryGain.disconnect();
                 this.gainNode!.disconnect();
 
             }
@@ -458,6 +476,10 @@ try {
         this.reverbNode.disconnect();
         this.reverbWetGain.disconnect();
         this.reverbDryGain.disconnect();
+        this.convolverInputNode.disconnect();
+        this.convolverNode.disconnect();
+        this.convolverWetGain.disconnect();
+        this.convolverDryGain.disconnect();
         this.lpfNode.disconnect();
         this.gainNode!.disconnect();
 
@@ -495,14 +517,47 @@ try {
         this.lpfNode.connect(this.reverbNode);
         this.reverbNode.connect(this.reverbWetGain);
 
-        this.reverbDryGain.connect(this.gainNode!);
-        this.reverbWetGain.connect(this.gainNode!);
+        this.reverbDryGain.connect(this.convolverInputNode);
+        this.reverbWetGain.connect(this.convolverInputNode);
+
+        this.convolverInputNode.connect(this.convolverDryGain);
+        this.convolverInputNode.connect(this.convolverNode);
+        this.convolverNode.connect(this.convolverWetGain);
+
+        this.convolverDryGain.connect(this.gainNode!);
+        this.convolverWetGain.connect(this.gainNode!);
 
         this.gainNode!.connect(this.ctx.destination);
 
     }
 
-    // NOTE: enableConvolver is REMOVED/Obsolete.
+    // --- CONVOLVER METHODS ---
+    public async setConvolverImpulse(url: string): Promise<void> {
+        if (!url) {
+            this.convolverNode.buffer = null;
+            return;
+        }
+
+        try {
+            await this.unlockAudioContext();
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error(`Failed to load impulse response: ${response.statusText}`);
+            }
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await this.ctx.decodeAudioData(arrayBuffer);
+            this.convolverNode.buffer = audioBuffer;
+        } catch (error) {
+            console.error('[Equalizer] Error loading convolver impulse:', error);
+        }
+    }
+
+    public setConvolverMix(mix: number): void {
+        this.convolverMix = mix;
+        this.convolverDryGain.gain.setValueAtTime(1 - mix, this.ctx.currentTime);
+        this.convolverWetGain.gain.setValueAtTime(mix, this.ctx.currentTime);
+    }
+    // --- END CONVOLVER METHODS ---
 
     /**
      * Renders the entire audio file through the EQ and Pitch pipeline offline.

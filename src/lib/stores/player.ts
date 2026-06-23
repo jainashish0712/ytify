@@ -55,12 +55,7 @@ const createInitialState = (): PlayerStore => ({
     duration: ''
   },
   mediaArtwork: blankImage,
-  supportsOpus: navigator.mediaCapabilities.decodingInfo({
-    type: 'file',
-    audio: {
-      contentType: 'audio/webm;codecs=opus'
-    }
-  }).then(res => res.supported),
+  supportsOpus: Promise.resolve(new Audio().canPlayType('audio/webm;codecs=opus') !== ''),
   data: {},
   immersive: false,
   isMusic: true,
@@ -152,11 +147,11 @@ createRoot(() => {
         });
       }
     } else {
-        if (playerStore.playbackState === 'playing') {
-            playerStore.silentAudio.loop = true;
-            playerStore.silentAudio.play();
-            playerStore.audio.muted = true;
-        }
+      if (playerStore.playbackState === 'playing') {
+        playerStore.silentAudio.loop = true;
+        playerStore.silentAudio.play();
+        playerStore.audio.muted = true;
+      }
     }
   });
 
@@ -192,10 +187,13 @@ createRoot(() => {
     equalizerInstance.setReverbMix(0);
     equalizerInstance.setLPFFrequency(22050);
     equalizerInstance.setLPFPeak(1);
+    equalizerInstance.setConvolverMix(1);
+    equalizerInstance.setConvolverImpulse('/irs/testeqapo3.wav');
     setEqualizerStore('bandGains', equalizerInstance.getBandGains());
     setEqualizerStore('pitch', equalizerInstance.getPitch());
     setEqualizerStore('reverb', { time: 0.01, decay: 0.01, mix: 0 });
     setEqualizerStore('lpf', { frequency: 22050, peak: 1 });
+    setEqualizerStore('convolver', { impulse: '/irs/testeqapo3.wav', mix: 1 });
   }
 
 
@@ -284,7 +282,7 @@ createRoot(() => {
 
     // iOS Safari Equalizer Workaround
     if (equalizerInstance) {
-        equalizerInstance.reloadForIOSBug();
+      equalizerInstance.reloadForIOSBug();
     }
   }
 
@@ -344,7 +342,7 @@ createRoot(() => {
       import('@modules/mediaSession').then(m => m.updateMediaSessionPosition());
   }
 
-  playerStore.audio.oncanplaythrough = async function() {
+  playerStore.audio.oncanplaythrough = async function () {
     const nextItem = config.queuePrefetch && queueStore.list[0]?.id;
 
     if (!nextItem) return;

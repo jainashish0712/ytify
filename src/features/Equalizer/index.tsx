@@ -3,6 +3,7 @@ import './Equalizer.css';
 import '../Player/slider.css';
 import { equalizerInstance } from '../../lib/stores/player';
 import { equalizerStore, setEqualizerStore, setNavStore } from '../../lib/stores';
+import { IRS_OPTIONS } from '../../lib/utils/irs';
 
 const bands = [
   { freq: 40, label: '40' },
@@ -66,11 +67,28 @@ export default function Equalizer() {
     }
   };
 
+  const handleConvolverChange = (key: 'impulse' | 'mix', e: Event) => {
+    if (key === 'impulse') {
+      const value = (e.target as HTMLSelectElement).value;
+      setEqualizerStore('convolver', key, value);
+      if (equalizerInstance) {
+        equalizerInstance.setConvolverImpulse(value);
+      }
+    } else if (key === 'mix') {
+      const value = parseFloat((e.target as HTMLInputElement).value);
+      setEqualizerStore('convolver', key, value);
+      if (equalizerInstance) {
+        equalizerInstance.setConvolverMix(value);
+      }
+    }
+  };
+
   const resetEQ = () => {
     setEqualizerStore('bandGains', Array(16).fill(0));
     setEqualizerStore('pitch', 0);
     setEqualizerStore('reverb', { time: 0.01, decay: 0.01, mix: 0 });
     setEqualizerStore('lpf', { frequency: 22050, peak: 1 });
+    setEqualizerStore('convolver', { impulse: '/irs/testeqapo3.wav', mix: 0 });
     if (equalizerInstance) {
       for (let i = 0; i < 16; i++) {
         equalizerInstance.setBandGain(i, 0);
@@ -81,6 +99,8 @@ export default function Equalizer() {
       equalizerInstance.setReverbMix(0);
       equalizerInstance.setLPFFrequency(22050);
       equalizerInstance.setLPFPeak(1);
+      equalizerInstance.setConvolverMix(0);
+      equalizerInstance.setConvolverImpulse('/irs/testeqapo3.wav');
     }
   };
 
@@ -164,6 +184,46 @@ export default function Equalizer() {
               step="0.02"
               value={equalizerStore.reverb.mix}
               onInput={(e) => handleReverbChange('mix', e)}
+            />
+          </div>
+        </div>
+
+        <div class="eq-convolver-wrapper">
+          <div class="eq-convolver-header">
+            <span>Convolver</span>
+          </div>
+          
+          <div class="eq-convolver-row">
+            <span>Impulse URL:</span>
+            <select
+              value={equalizerStore.convolver.impulse}
+              onChange={(e) => handleConvolverChange('impulse', e)}
+              class="eq-convolver-input"
+            >
+              <option value="">None</option>
+              <For each={IRS_OPTIONS}>
+                {(category) => (
+                  <optgroup label={category.category}>
+                    <For each={category.files}>
+                      {(file) => (
+                        <option value={file.path}>{file.name}</option>
+                      )}
+                    </For>
+                  </optgroup>
+                )}
+              </For>
+            </select>
+          </div>
+
+          <div class="eq-convolver-row">
+            <span>Mix: {equalizerStore.convolver.mix.toFixed(2)}</span>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.02"
+              value={equalizerStore.convolver.mix}
+              onInput={(e) => handleConvolverChange('mix', e)}
             />
           </div>
         </div>

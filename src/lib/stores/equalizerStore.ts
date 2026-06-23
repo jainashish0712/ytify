@@ -12,6 +12,10 @@ export type EqualizerStore = {
     frequency: number;
     peak: number;
   };
+  convolver: {
+    impulse: string;
+    mix: number;
+  };
 };
 
 const createInitialState = (): EqualizerStore => ({
@@ -25,6 +29,10 @@ const createInitialState = (): EqualizerStore => ({
   lpf: {
     frequency: 22050,
     peak: 1,
+  },
+  convolver: {
+    impulse: '/irs/testeqapo3.wav',
+    mix: 1,
   },
 });
 
