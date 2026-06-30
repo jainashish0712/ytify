@@ -185,7 +185,7 @@
 
 .mainShelf {
   display: flex;
-  justify-content: space-between;
+  justify-content: space-around;
 
   :first-child {
     animation: var(--animation-slide-in-down) forwards;

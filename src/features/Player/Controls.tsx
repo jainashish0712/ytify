@@ -1,116 +1,123 @@
 import { LikeButton, PlayButton, PlayNextButton } from "@components/MediaPartials";
 import { params, playerStore, playPrev, queueStore, setPlayerStore, updateParam, t } from "@stores";
 import { equalizerInstance } from '../../lib/stores/player'; // Direct relative import
-import { convertSStoHHMMSS, setConfig } from "@utils";
-import { Accessor, createSignal, createEffect, onCleanup, onMount, Setter, Show, untrack } from "solid-js";
+import { setConfig } from "@utils";
+import { Accessor, createSignal, Setter, Show } from "solid-js";
+import { DraggableSlider } from "@components/DraggableSlider/DraggableSlider";
 
-function DraggableSlider(props: {
-  value: number;
-  max: number;
-  onChange: (val: number) => void;
-}) {
-  let inputRef!: HTMLInputElement;
-  const [isDragging, setIsDragging] = createSignal(false);
-  const [dragValue, setDragValue] = createSignal(0);
+// function DraggableSlider(props: {
+//   value: number;
+//   max: number;
+//   onChange: (val: number) => void;
+// }) {
+//   let inputRef!: HTMLInputElement;
+//   const [isDragging, setIsDragging] = createSignal(false);
+//   const [dragValue, setDragValue] = createSignal(0);
 
-  const displayValue = () => isDragging() ? dragValue() : props.value;
+//   const displayValue = () => isDragging() ? dragValue() : props.value;
 
-  const updateFromEvent = (e: PointerEvent) => {
-    if (!inputRef) return;
-    const rect = inputRef.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    let p = x / rect.width;
-    p = Math.max(0, Math.min(1, p));
-    setDragValue(p * (props.max || 1));
-  };
+//   const updateFromEvent = (e: PointerEvent) => {
+//     if (!inputRef) return;
+//     const rect = inputRef.getBoundingClientRect();
+//     console.log("21",rect);
+//     const x = e.clientX - rect.left;
+//     console.log("23",x);
+//     let p = x / rect.width;
+//     p = Math.max(0, Math.min(1, p));
+//     console.log("26",p);
+//     let dragV = p * (props.max || 1)
+//     setDragValue(dragV);
+//     console.log("28",dragV);
+//     console.log("29",rect,x,p,dragV);
+//   };
 
-  const onPointerDown = (e: PointerEvent) => {
-    setIsDragging(true);
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    updateFromEvent(e);
-  };
+//   const onPointerDown = (e: PointerEvent) => {
+//     setIsDragging(true);
+//     (e.target as HTMLElement).setPointerCapture(e.pointerId);
+//     updateFromEvent(e);
+//   };
 
-  const onPointerMove = (e: PointerEvent) => {
-    if (isDragging()) {
-      updateFromEvent(e);
-    }
-  };
+//   const onPointerMove = (e: PointerEvent) => {
+//     if (isDragging()) {
+//       updateFromEvent(e);
+//     }
+//   };
 
-  const onPointerUp = (e: PointerEvent) => {
-    if (isDragging()) {
-      setIsDragging(false);
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-      props.onChange(dragValue());
-    }
-  };
+//   const onPointerUp = (e: PointerEvent) => {
+//     if (isDragging()) {
+//       setIsDragging(false);
+//       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+//       props.onChange(dragValue());
+//     }
+//   };
 
-  onMount(() => {
-    ['touchstart', 'touchmove', 'touchend'].forEach(type => {
-      if (inputRef) {
-        inputRef.addEventListener(type, (e) => e.stopPropagation());
-      }
-    });
-  });
+//   onMount(() => {
+//     ['touchstart', 'touchmove', 'touchend'].forEach(type => {
+//       if (inputRef) {
+//         inputRef.addEventListener(type, (e) => e.stopPropagation());
+//       }
+//     });
+//   });
 
-  const percent = () => {
-    const m = props.max || 1;
-    return (displayValue() / m) * 100;
-  };
+//   const percent = () => {
+//     const m = props.max || 1;
+//     return (displayValue() / m) * 100;
+//   };
 
-  return (
-    <span class="slider" style={{ "position": "relative" }}>
-      <div style={{
-        "position": "absolute",
-        "left": `calc(${percent()}%)`,
-        "bottom": "45px",
-        "transform": `translateX(-50%) scale(${isDragging() ? 1 : 0})`,
-        "transition": "transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-        "background": "var(--theme)",
-        "color": "var(--theme-text, white)",
-        "padding": "4px 8px",
-        "border-radius": "6px",
-        "font-size": "12px",
-        "font-weight": "bold",
-        "pointer-events": "none",
-        "white-space": "nowrap",
-        "box-shadow": "0 2px 8px rgba(0,0,0,0.3)",
-        "z-index": "20",
-        "transform-origin": "bottom center"
-      }}>
-        {convertSStoHHMMSS(Math.floor(displayValue()))}
-        <div style={{
-          "position": "absolute",
-          "bottom": "-3px",
-          "left": "50%",
-          "transform": "translateX(-50%) rotate(45deg)",
-          "width": "8px",
-          "height": "8px",
-          "background": "var(--theme)",
-          "z-index": "-1"
-        }}></div>
-      </div>
-      <input
-        ref={inputRef}
-        type="range"
-        min="0"
-        max={props.max}
-        value={displayValue()}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        style={{
-          "touch-action": "none",
-          "cursor": isDragging() ? "grabbing" : "grab"
-        }}
-      />
-      <div>
-        <p id="currentDuration">{convertSStoHHMMSS(Math.floor(displayValue()))}</p>
-        <p id="fullDuration">{convertSStoHHMMSS(props.max)}</p>
-      </div>
-    </span>
-  );
-}
+//   return (
+//     <span class="slider" style={{ "position": "relative" }}>
+//       <div style={{
+//         "position": "absolute",
+//         "left": `calc(${percent()}%)`,
+//         "bottom": "45px",
+//         "transform": `translateX(-50%) scale(${isDragging() ? 1 : 0})`,
+//         "transition": "transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+//         "background": "var(--theme)",
+//         "color": "var(--theme-text, white)",
+//         "padding": "4px 8px",
+//         "border-radius": "6px",
+//         "font-size": "12px",
+//         "font-weight": "bold",
+//         "pointer-events": "none",
+//         "white-space": "nowrap",
+//         "box-shadow": "0 2px 8px rgba(0,0,0,0.3)",
+//         "z-index": "20",
+//         "transform-origin": "bottom center"
+//       }}>
+//         {convertSStoHHMMSS(Math.floor(displayValue()))}
+//         <div style={{
+//           "position": "absolute",
+//           "bottom": "-3px",
+//           "left": "50%",
+//           "transform": "translateX(-50%) rotate(45deg)",
+//           "width": "8px",
+//           "height": "8px",
+//           "background": "var(--theme)",
+//           "z-index": "-1"
+//         }}></div>
+//       </div>
+//       <input
+//         ref={inputRef}
+//         type="range"
+//         min="0"
+//         max={props.max}
+//         value={displayValue()}
+//         onPointerDown={onPointerDown}
+//         onPointerMove={onPointerMove}
+//         onPointerUp={onPointerUp}
+//         onPointerCancel={onPointerUp}
+//         style={{
+//           "touch-action": "none",
+//           "cursor": isDragging() ? "grabbing" : "grab"
+//         }}
+//       />
+//       <div>
+//         <p id="currentDuration">{convertSStoHHMMSS(Math.floor(displayValue()))}</p>
+//         <p id="fullDuration">{convertSStoHHMMSS(props.max)}</p>
+//       </div>
+//     </span>
+//   );
+// }
 
 export default function (_: {
   showLyrics: Accessor<boolean>,
@@ -142,6 +149,7 @@ export default function (_: {
       <DraggableSlider
         value={playerStore.currentTime}
         max={playerStore.fullDuration}
+        min={0}
         onChange={(val) => {
           playerStore.audio.currentTime = val;
         }}
@@ -183,7 +191,7 @@ export default function (_: {
           class="ri-replay-15-line"
           id="seekBwdButton"
           onclick={() => {
-            playerStore.audio.currentTime -= 15;
+            playerStore.audio.currentTime -= 5;
           }}
         ></button>
 
@@ -194,7 +202,7 @@ export default function (_: {
           class="ri-forward-15-line"
           id="seekFwdButton"
           onclick={() => {
-            playerStore.audio.currentTime += 15;
+            playerStore.audio.currentTime += 5;
           }}
         ></button>
         <Show when={queueStore.list.length}>

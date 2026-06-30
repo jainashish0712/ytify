@@ -1,16 +1,15 @@
 /* === range theme and appearance === */
 input[type="range"] {
   font-size: 1.5rem;
-  --thumb-height: 0.325em;
-  --track-height: 0.625em;
-  --track-color: var(--onBg);
+  --thumb-height: 0.8em;
+  --track-height: 1.2em;
+  --track-color: color-mix(in srgb, var(--onBg) 20%, transparent);
   --brightness-hover: 180%;
   --brightness-down: 80%;
   --clip-edges: 0.125em;
   /* === range commons === */
   position: relative;
   background: #fff0;
-    /* backdrop-filter: blur(var(--size-px-3)); */
   overflow: hidden;
 }
 
@@ -70,6 +69,7 @@ input[type="range"]:active::-webkit-slider-thumb {
 
 input[type="range"]::-webkit-slider-runnable-track {
   background: linear-gradient(var(--track-color) 0 0) scroll no-repeat center / 100% calc(var(--track-height) + 6px);
+  backdrop-filter: blur(8px);
 }
 
 input[type="range"]:disabled::-webkit-slider-thumb {
@@ -105,10 +105,8 @@ input[type="range"]:active::-moz-range-thumb {
 
 input[type="range"]::-moz-range-track {
   width: 100%;
-    background-color: hsl(from white h s l / 0.2);
-  /* background: var(--track-color); */
-    backdrop-filter: blur(var(--size-px-6));
-
+  background-color: var(--track-color);
+  backdrop-filter: blur(8px);
 }
 
 input[type="range"]::-moz-range-progress {

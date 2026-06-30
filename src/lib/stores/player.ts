@@ -11,6 +11,7 @@ export let equalizerInstance: Equalizer | null = null; // Export equalizerInstan
 const blankImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhCIjCB0C8AAAAASUVORK5CYII=';
 
 type PlayerStore = {
+  playbackRate: any;
   stream: TrackItem & { albumId?: string },
   audio: HTMLAudioElement,
   silentAudio: HTMLAudioElement,
