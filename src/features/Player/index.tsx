@@ -91,7 +91,7 @@ export default function() {
           </Show>
         </p>
 
-        <div class="irs-selectors">
+        {/* <div class="irs-selectors">
           <select
             value={irsStore.selectedCategory}
             onchange={(e) => updateSelectedIrsCategory(e.currentTarget.value)}
@@ -111,7 +111,7 @@ export default function() {
               <option value={file.name}>{file.name}</option>
             ))}
           </select>
-        </div>
+        </div> */}
 
         <div class="right-group">
 

@@ -3,7 +3,8 @@ import './Equalizer.css';
 import '../Player/slider.css';
 import { equalizerInstance } from '../../lib/stores/player';
 import { equalizerStore, setEqualizerStore, setNavStore } from '../../lib/stores';
-import { NumSlider } from '@components/NumSlider';
+import { IRS_OPTIONS } from '../../lib/utils/irs';
+import { DraggableSlider } from '@components/DraggableSlider/DraggableSlider';
 
 const bands = [
   { freq: 40, label: '40' },
@@ -32,6 +33,14 @@ export default function Equalizer() {
     setNavStore('equalizer', 'ref', equalizerRef);
   });
 
+  const handlePitchChange = (e: Event | number) => {
+    const value = typeof e === 'number' ? e : parseFloat((e.target as HTMLInputElement).value);
+    setEqualizerStore('pitch', value);
+    if (equalizerInstance) {
+      equalizerInstance.setPitch(value);
+    }
+  };
+
   const handleGainChange = (index: number, e: Event) => {
     const value = parseFloat((e.target as HTMLInputElement).value);
     setEqualizerStore('bandGains', index, value);
@@ -40,8 +49,8 @@ export default function Equalizer() {
     }
   };
 
-  const handleReverbChange = (key: 'time' | 'decay' | 'mix', e: Event) => {
-    const value = parseFloat((e.target as HTMLInputElement).value);
+  const handleReverbChange = (key: 'time' | 'decay' | 'mix', e: Event | number) => {
+    const value = typeof e === 'number' ? e : parseFloat((e.target as HTMLInputElement).value);
     setEqualizerStore('reverb', key, value);
     if (equalizerInstance) {
       if (key === 'time') equalizerInstance.setReverbTime(value);
@@ -50,12 +59,28 @@ export default function Equalizer() {
     }
   };
 
-  const handleLPFChange = (key: 'frequency' | 'peak', e: Event) => {
-    const value = parseFloat((e.target as HTMLInputElement).value);
+  const handleLPFChange = (key: 'frequency' | 'peak', e: Event | number) => {
+    const value = typeof e === 'number' ? e : parseFloat((e.target as HTMLInputElement).value);
     setEqualizerStore('lpf', key, value);
     if (equalizerInstance) {
       if (key === 'frequency') equalizerInstance.setLPFFrequency(value);
       else if (key === 'peak') equalizerInstance.setLPFPeak(value);
+    }
+  };
+
+  const handleConvolverChange = (key: 'impulse' | 'mix', e: Event | number) => {
+    if (key === 'impulse') {
+      const value = ((e as Event).target as HTMLSelectElement).value;
+      setEqualizerStore('convolver', key, value);
+      if (equalizerInstance) {
+        equalizerInstance.setConvolverImpulse(value);
+      }
+    } else if (key === 'mix') {
+      const value = typeof e === 'number' ? e : parseFloat(((e as Event).target as HTMLInputElement).value);
+      setEqualizerStore('convolver', key, value);
+      if (equalizerInstance) {
+        equalizerInstance.setConvolverMix(value);
+      }
     }
   };
 
@@ -64,6 +89,7 @@ export default function Equalizer() {
     setEqualizerStore('pitch', 0);
     setEqualizerStore('reverb', { time: 0.01, decay: 0.01, mix: 0 });
     setEqualizerStore('lpf', { frequency: 22050, peak: 1 });
+    setEqualizerStore('convolver', { impulse: '/irs/testeqapo3.wav', mix: 1 });
     if (equalizerInstance) {
       for (let i = 0; i < 16; i++) {
         equalizerInstance.setBandGain(i, 0);
@@ -74,12 +100,39 @@ export default function Equalizer() {
       equalizerInstance.setReverbMix(0);
       equalizerInstance.setLPFFrequency(22050);
       equalizerInstance.setLPFPeak(1);
+      equalizerInstance.setConvolverMix(1);
+      equalizerInstance.setConvolverImpulse('/irs/testeqapo3.wav');
+    }
+  };
+  const resetPitch = () => {
+    setEqualizerStore('pitch', 0);
+    if (equalizerInstance) {
+      equalizerInstance.setPitch(0);
+    }
+  };
+  const resetReverb = () => {
+    setEqualizerStore('reverb', { time: 0.01, decay: 0.01, mix: 0 });
+    if (equalizerInstance) {
+      equalizerInstance.setReverbTime(0.01);
+      equalizerInstance.setReverbDecay(0.01);
+      equalizerInstance.setReverbMix(0);
+    }
+  };
+  const resetLPF = () => {
+    setEqualizerStore('lpf', { frequency: 22050, peak: 1 });
+    if (equalizerInstance) {
+
+      equalizerInstance.setLPFFrequency(22050);
+      equalizerInstance.setLPFPeak(1);
+
     }
   };
 
   return (
-    <section ref={equalizerRef} id="view-content" class="eq-basic-view">
-      <header>
+    <section ref={equalizerRef}
+    // id="view-content" class="eq-basic-view"
+    >
+      <header onclick={resetEQ}>
         <p>Equalizer</p>
       </header>
 
@@ -105,94 +158,202 @@ export default function Equalizer() {
         </div>
 
         <div class="eq-pitch-wrapper">
-          <div class="eq-pitch-header">
+          <div class="eq-pitch-header" onclick={resetPitch}>
             <span>Pitch Shift</span>
             <span>{equalizerStore.pitch.toFixed(2)} st</span>
           </div>
-          <NumSlider
-            min={-4}
-            max={4}
+          {/* <input
+            type="range"
+            min="-5"
+            max="5"
+            step="0.1"
             value={equalizerStore.pitch}
-            suffix=" st"
-            onValueChange={(val) => {
-                setEqualizerStore('pitch', val);
-                if (equalizerInstance) {
-                    equalizerInstance.setPitch(val);
-                }
-            }}
-          />
+            onInput={handlePitchChange}
+          /> */}
+
+              <DraggableSlider
+                value={equalizerStore.pitch}
+                min={-5}
+                max={5}
+                step={0.1}
+                onInput={handlePitchChange}
+                onChange={handlePitchChange}
+                formatValue={(v) => v.toFixed(2) + ' st'}
+                hideLabels={true}
+              />
         </div>
 
         <div class="eq-reverb-wrapper">
-          <div class="eq-reverb-header">
+          <div class="eq-reverb-header" onclick={resetReverb}>
             <span>Reverb</span>
           </div>
 
           <div class="eq-reverb-row">
             <span>Time: {equalizerStore.reverb.time.toFixed(2)}s</span>
-            <input
+            {/* <input
               type="range"
               min="0.01"
               max="3"
               step="0.1"
               value={equalizerStore.reverb.time}
               onInput={(e) => handleReverbChange('time', e)}
-            />
+            /> */}
+              <DraggableSlider
+                value={equalizerStore.reverb.time}
+                min={0.01}
+                max={2}
+                step={0.01}
+                onInput={(e) => handleReverbChange('time', e)}
+                onChange={(e) => handleReverbChange('time', e)}
+                formatValue={(v) => v.toFixed(2) + 's'}
+                hideLabels={true}
+              />
           </div>
 
           <div class="eq-reverb-row">
             <span>Decay: {equalizerStore.reverb.decay.toFixed(2)}s</span>
-            <input
+            {/* <input
               type="range"
-              min="0.01"
-              max="3"
+              min="1"
+              max="5"
               step="0.1"
               value={equalizerStore.reverb.decay}
               onInput={(e) => handleReverbChange('decay', e)}
-            />
+            /> */}
+              <DraggableSlider
+                value={equalizerStore.reverb.decay}
+                min={1}
+                max={5}
+                step={0.1}
+                onInput={(e) => handleReverbChange('decay', e)}
+                onChange={(e) => handleReverbChange('decay', e)}
+                formatValue={(v) => v.toFixed(2) + 's'}
+                hideLabels={true}
+              />
           </div>
 
           <div class="eq-reverb-row">
             <span>Mix: {equalizerStore.reverb.mix.toFixed(2)}</span>
-            <input
+            {/* <input
               type="range"
               min="0"
               max="1"
               step="0.02"
               value={equalizerStore.reverb.mix}
               onInput={(e) => handleReverbChange('mix', e)}
-            />
+            /> */}
+              <DraggableSlider
+                value={equalizerStore.reverb.mix}
+                min={0}
+                max={1}
+                step={0.02}
+                onInput={(e) => handleReverbChange('mix', e)}
+                onChange={(e) => handleReverbChange('mix', e)}
+                formatValue={(v) => v.toFixed(2)}
+                hideLabels={true}
+              />
+          </div>
+        </div>
+
+        <div class="eq-convolver-wrapper">
+          <div class="eq-convolver-header">
+            <span>Convolver</span>
+          </div>
+
+          <div class="eq-convolver-row">
+            <span>Impulse URL:</span>
+            <select
+              value={equalizerStore.convolver.impulse}
+              onChange={(e) => handleConvolverChange('impulse', e)}
+              class="eq-convolver-input"
+            >
+              <option value="">None</option>
+              <For each={IRS_OPTIONS}>
+                {(category) => (
+                  <optgroup label={category.category}>
+                    <For each={category.files}>
+                      {(file) => (
+                        <option value={file.path}>{file.name}</option>
+                      )}
+                    </For>
+                  </optgroup>
+                )}
+              </For>
+            </select>
+          </div>
+
+          <div class="eq-convolver-row">
+            <span>Mix: {equalizerStore.convolver.mix.toFixed(2)}</span>
+            {/* <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.02"
+              value={equalizerStore.convolver.mix}
+              onInput={(e) => handleConvolverChange('mix', e)}
+            /> */}
+              <DraggableSlider
+                value={equalizerStore.convolver.mix}
+                min={0}
+                max={1}
+                step={0.02}
+                onInput={(e) => handleConvolverChange('mix', e)}
+                onChange={(e) => handleConvolverChange('mix', e)}
+                formatValue={(v) => v.toFixed(2)}
+                hideLabels={true}
+              />
           </div>
         </div>
 
         <div class="eq-lpf-wrapper">
-          <div class="eq-lpf-header">
+          <div class="eq-lpf-header" onclick={resetLPF}>
             <span>Low-Pass Filter</span>
           </div>
 
           <div class="eq-lpf-row">
             <span>Frequency: {equalizerStore.lpf.frequency.toFixed(0)}Hz</span>
-            <input
+            {/* <input
               type="range"
               min="10"
               max="22050"
-              step="10"
+              step="20"
               value={equalizerStore.lpf.frequency}
               onInput={(e) => handleLPFChange('frequency', e)}
-            />
+            /> */}
+              <DraggableSlider
+                value={equalizerStore.lpf.frequency}
+                min={10}
+                max={22050}
+                step={20}
+                onInput={(e) => handleLPFChange('frequency', e)}
+                onChange={(e) => handleLPFChange('frequency', e)}
+                formatValue={(v) => v.toFixed(0) + 'Hz'}
+                hideLabels={true}
+              />
           </div>
 
           <div class="eq-lpf-row">
             <span>Peak: {equalizerStore.lpf.peak.toFixed(2)}</span>
-            <input
+            {/* <input
               type="range"
-              min="0.0001"
+              min="1"
               max="20"
-              step="0.01"
+              step="0.1"
               value={equalizerStore.lpf.peak}
               onInput={(e) => handleLPFChange('peak', e)}
-            />
+              /> */}
+              <DraggableSlider
+                value={equalizerStore.lpf.peak}
+                min={1}
+                max={4}
+                step={0.1}
+                onInput={(e) => handleLPFChange('peak', e)}
+                onChange={(e) => handleLPFChange('peak', e)}
+                formatValue={(v) => v.toFixed(2)}
+                hideLabels={true}
+              />
           </div>
+
         </div>
 
         <button class="eq-btn-reset" onClick={resetEQ}>Reset Defaults</button>

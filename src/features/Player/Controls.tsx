@@ -1,13 +1,125 @@
 import { LikeButton, PlayButton, PlayNextButton } from "@components/MediaPartials";
 import { params, playerStore, playPrev, queueStore, setPlayerStore, updateParam, t, closeFeature, setNavStore } from "@stores";
 import { equalizerInstance } from '../../lib/stores/player'; // Direct relative import
-import { NumSlider } from '@components/NumSlider';
-import { convertSStoHHMMSS, setConfig } from "@utils";
-import { Accessor, createSignal, onMount, Setter, Show } from "solid-js";
-import { AppleSeekSlider } from "./AppleSeekSlider";
-import { IRS_OPTIONS } from "../../lib/utils/irs";
+import { setConfig } from "@utils";
+import { Accessor, createSignal, Setter, Show } from "solid-js";
+import { DraggableSlider } from "@components/DraggableSlider/DraggableSlider";
 
-export default function(_: {
+// function DraggableSlider(props: {
+//   value: number;
+//   max: number;
+//   onChange: (val: number) => void;
+// }) {
+//   let inputRef!: HTMLInputElement;
+//   const [isDragging, setIsDragging] = createSignal(false);
+//   const [dragValue, setDragValue] = createSignal(0);
+
+//   const displayValue = () => isDragging() ? dragValue() : props.value;
+
+//   const updateFromEvent = (e: PointerEvent) => {
+//     if (!inputRef) return;
+//     const rect = inputRef.getBoundingClientRect();
+//     console.log("21",rect);
+//     const x = e.clientX - rect.left;
+//     console.log("23",x);
+//     let p = x / rect.width;
+//     p = Math.max(0, Math.min(1, p));
+//     console.log("26",p);
+//     let dragV = p * (props.max || 1)
+//     setDragValue(dragV);
+//     console.log("28",dragV);
+//     console.log("29",rect,x,p,dragV);
+//   };
+
+//   const onPointerDown = (e: PointerEvent) => {
+//     setIsDragging(true);
+//     (e.target as HTMLElement).setPointerCapture(e.pointerId);
+//     updateFromEvent(e);
+//   };
+
+//   const onPointerMove = (e: PointerEvent) => {
+//     if (isDragging()) {
+//       updateFromEvent(e);
+//     }
+//   };
+
+//   const onPointerUp = (e: PointerEvent) => {
+//     if (isDragging()) {
+//       setIsDragging(false);
+//       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+//       props.onChange(dragValue());
+//     }
+//   };
+
+//   onMount(() => {
+//     ['touchstart', 'touchmove', 'touchend'].forEach(type => {
+//       if (inputRef) {
+//         inputRef.addEventListener(type, (e) => e.stopPropagation());
+//       }
+//     });
+//   });
+
+//   const percent = () => {
+//     const m = props.max || 1;
+//     return (displayValue() / m) * 100;
+//   };
+
+//   return (
+//     <span class="slider" style={{ "position": "relative" }}>
+//       <div style={{
+//         "position": "absolute",
+//         "left": `calc(${percent()}%)`,
+//         "bottom": "45px",
+//         "transform": `translateX(-50%) scale(${isDragging() ? 1 : 0})`,
+//         "transition": "transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+//         "background": "var(--theme)",
+//         "color": "var(--theme-text, white)",
+//         "padding": "4px 8px",
+//         "border-radius": "6px",
+//         "font-size": "12px",
+//         "font-weight": "bold",
+//         "pointer-events": "none",
+//         "white-space": "nowrap",
+//         "box-shadow": "0 2px 8px rgba(0,0,0,0.3)",
+//         "z-index": "20",
+//         "transform-origin": "bottom center"
+//       }}>
+//         {convertSStoHHMMSS(Math.floor(displayValue()))}
+//         <div style={{
+//           "position": "absolute",
+//           "bottom": "-3px",
+//           "left": "50%",
+//           "transform": "translateX(-50%) rotate(45deg)",
+//           "width": "8px",
+//           "height": "8px",
+//           "background": "var(--theme)",
+//           "z-index": "-1"
+//         }}></div>
+//       </div>
+//       <input
+//         ref={inputRef}
+//         type="range"
+//         min="0"
+//         max={props.max}
+//         value={displayValue()}
+//         onPointerDown={onPointerDown}
+//         onPointerMove={onPointerMove}
+//         onPointerUp={onPointerUp}
+//         onPointerCancel={onPointerUp}
+//         style={{
+//           "touch-action": "none",
+//           "cursor": isDragging() ? "grabbing" : "grab"
+//         }}
+//       />
+//       <div>
+//         <p id="currentDuration">{convertSStoHHMMSS(Math.floor(displayValue()))}</p>
+//         <p id="fullDuration">{convertSStoHHMMSS(props.max)}</p>
+//       </div>
+//     </span>
+//   );
+// }
+
+export default function (_: {
   showLyrics: Accessor<boolean>,
   setShowLyrics: Setter<boolean>
 }) {
@@ -15,14 +127,6 @@ export default function(_: {
   const [isPointed, setPointed] = createSignal(params.has('t'));
   const [isVocalProcessing, setVocalProcessing] = createSignal(false);
   const [vocalVolume, setVocalVolumeSignal] = createSignal(1.0);
-  let slider!: HTMLInputElement;
-
-
-  onMount(() => {
-    ['touchstart', 'touchmove', 'touchend'].forEach(type => {
-      slider?.addEventListener(type, (e) => e.stopPropagation());
-    });
-  })
 
   function updatePositionState() {
     if ('mediaSession' in navigator)
@@ -71,22 +175,14 @@ export default function(_: {
     });
   return (
     <>
-      <div style={{ "margin-bottom": "20px" }}>
-        <AppleSeekSlider />
-      </div>
-      <NumSlider
-        min={0}
-        max={playerStore.fullDuration}
+      <DraggableSlider
         value={playerStore.currentTime}
-        onValueChange={(value) => {
-          playerStore.audio.currentTime = value;
+        max={playerStore.fullDuration}
+        min={0}
+        onChange={(val) => {
+          playerStore.audio.currentTime = val;
         }}
-        suffix=""
       />
-      <div style={{"display": "flex", "justify-content": "space-between"}}>
-        <p id="currentDuration">{convertSStoHHMMSS(playerStore.currentTime)}</p>
-        <p id="fullDuration">{convertSStoHHMMSS(playerStore.fullDuration)}</p>
-      </div>
 
       <Show when={isVocalProcessing()}>
         <span class="slider vocal-slider" style={{ "margin-top": "10px" }}>
@@ -157,7 +253,7 @@ export default function(_: {
             setPlayerStore('playbackRate', speed);
 
             // Apply speed (tempo only)
-              playerStore.audio.playbackRate = speed;
+            playerStore.audio.playbackRate = speed;
 
             updatePositionState();
             ref.blur();

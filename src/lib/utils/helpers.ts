@@ -82,7 +82,11 @@ export async function quickSwitch() {
 
 
 export async function preferredStream(audioStreams: AudioStream[]) {
-  const preferedCodec = (await playerStore.supportsOpus) ? 'opus' : 'aac';
+  const isIOS = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1));
+  
+  // iOS Safari's WebAudio API (createMediaElementSource) silently fails when processing Opus/WebM streams.
+  // We must forcefully fallback to AAC (m4a) for iOS to make the Equalizer work, even though the browser claims Opus support.
+  const preferedCodec = ((await playerStore.supportsOpus) && !isIOS) ? 'opus' : 'aac';
 
   const itags = ({
     worst: {
