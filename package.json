@@ -15,7 +15,8 @@
     "soundtouchjs": "^0.3.0"
   },
   "overrides": {
-    "@rollup/plugin-terser": "1.0.0"
+    "@rollup/plugin-terser": "1.0.0",
+    "@netlify/otel": "6.0.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260410.1",
