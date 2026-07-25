@@ -8,9 +8,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@kawarp/core": "^1.2.0",
     "solid-js": "1.9.12",
     "solid-sortablejs": "^2.1.8",
-    "sortablejs": "^1.15.7"
+    "sortablejs": "^1.15.7",
+    "soundtouchjs": "^0.3.0"
   },
   "overrides": {
     "@rollup/plugin-terser": "1.0.0"

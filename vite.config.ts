@@ -141,11 +141,11 @@ const injectEruda = (serve: boolean) => serve ? (<PluginOption>{
 const apiMiddleware = (serve: boolean): PluginOption => serve ? {
   name: 'api-middleware',
   configureServer(server) {
-    const endpoints = ['album', 'artist', 'channel', 'gallery', 'playlist', 'search', 'search-suggestions', 'similar', 'subfeed'];
+    const endpoints = ['album', 'artist', 'channel', 'gallery', 'playlist', 'search', 'search-suggestions', 'similar', 'subfeed', 'streamfile'];
     server.middlewares.use(async (req, res, next) => {
       const url = new URL(req.url || '', 'http://localhost');
       const path = url.pathname.replace(/^\/api\//, '').replace(/^\//, '');
-      
+
       if (endpoints.includes(path) || req.url?.startsWith('/api/')) {
         const { createLocalAdapter } = await server.ssrLoadModule('./src/backend/localAdapter.ts');
         const adapter = createLocalAdapter();

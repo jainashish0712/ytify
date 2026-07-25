@@ -5,19 +5,22 @@ export default function() {
   let imgRef!: HTMLImageElement;
 
   function handler() {
-    setPlayerStore('mediaArtwork',
-      imgRef.src
+    const currentSrc = imgRef.src;
+    if (currentSrc.includes('maxres') || currentSrc.includes('.webp') || currentSrc.includes('vi_webp')) {
+      const newSrc = currentSrc
         .replace('maxres', 'mq')
         .replace('.webp', '.jpg')
-        .replace('vi_webp', 'vi')
-    );
+        .replace('vi_webp', 'vi');
+      if (newSrc !== playerStore.mediaArtwork) {
+        setPlayerStore('mediaArtwork', newSrc);
+      }
+    }
   }
 
   return (
     <img
       ref={imgRef}
       src={playerStore.mediaArtwork}
-      crossorigin="anonymous"
       alt={"Media Artwork for " + playerStore.stream.title}
       onclick={() => {
         if (playerStore.isMusic)

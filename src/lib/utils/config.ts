@@ -23,7 +23,8 @@ export let config = {
   volume: '100',
   dbsync: '',
   sortBy: 'modified' as 'modified' | 'name' | 'artist' | 'duration',
-  sortOrder: 'desc' as 'asc' | 'desc'
+  sortOrder: 'desc' as 'asc' | 'desc',
+  playerBackground: 'kawarp_no_artwork' as 'kawarp_no_artwork' | 'kawarp_with_artwork' | 'static_artwork'
 }
 
 type AppConfig = typeof config;

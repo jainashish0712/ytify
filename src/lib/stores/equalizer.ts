@@ -21,7 +21,7 @@ export class Equalizer {
     private soundtouch: any;
     private stNode: ScriptProcessorNode | null = null;
     private cachedAudioBuffer: AudioBuffer | null = null;
-    
+
     // Convolver properties
     private convolverNode: ConvolverNode;
     private convolverWetGain: GainNode;
@@ -34,6 +34,7 @@ export class Equalizer {
     private realtimeEnabled: boolean = false;
     private mediaSourceNode: MediaElementAudioSourceNode | null = null;
     public gainNode: GainNode | null = null; // Made public
+    public analyserNode: AnalyserNode | null = null;
 
     public vocalReductionActive: boolean = false;
     public vocalVolume: number = 1.0;
@@ -106,19 +107,21 @@ export class Equalizer {
         this.vocalOutputNode = this.ctx.createGain();
         this.vocalSplitter = this.ctx.createChannelSplitter(2);
         this.vocalMerger = this.ctx.createChannelMerger(2);
-        
+
         this.vocalInvertGain = this.ctx.createGain();
         this.vocalInvertGain.gain.value = -1; // Invert phase of right channel
-        
+
         this.vocalSumNode = this.ctx.createGain();
-        
+
         this.vocalOriginalGainNode = this.ctx.createGain();
         this.vocalOriginalGainNode.gain.value = 1.0; // Start with original signal
-        
+
         this.vocalReductionGainNode = this.ctx.createGain();
         this.vocalReductionGainNode.gain.value = 0.0; // Start with no reduction signal
 
         this.gainNode = this.ctx.createGain(); // Initialize the gainNode
+        this.analyserNode = this.ctx.createAnalyser();
+        this.analyserNode.fftSize = 512;
 
 
         // Ensure context is resumed / unlocked on play
@@ -144,7 +147,7 @@ export class Equalizer {
             }
             this.soundtouch.inputBuffer.putSamples(interleaved, 0, frames);
             this.soundtouch.process();
-            
+
             const outFrames = this.soundtouch.outputBuffer.frameCount;
             const framesToExtract = Math.min(frames, outFrames);
             const outInterleaved = new Float32Array(framesToExtract * 2);
@@ -359,7 +362,7 @@ export class Equalizer {
 
     public reloadForIOSBug(): void {
         if (!this.requiresUserGesture() || !this.mediaSourceNode) return;
-        
+
         // On iOS Safari, changing the src of an audio element often breaks the MediaElementAudioSourceNode's connection.
         // Reconnecting it forces Safari to re-evaluate the audio routing.
         try {
@@ -488,16 +491,16 @@ try {
         this.mediaSourceNode.connect(this.vocalInputNode!);
         this.vocalInputNode!.connect(this.vocalSplitter!);
         this.vocalInputNode!.connect(this.vocalOriginalGainNode!);
-        
+
         this.vocalSplitter!.connect(this.vocalSumNode!, 0); // L
         this.vocalSplitter!.connect(this.vocalInvertGain!, 1); // R
         this.vocalInvertGain!.connect(this.vocalSumNode!); // L - R
-        
+
         this.vocalSumNode!.connect(this.vocalMerger!, 0, 0);
         this.vocalSumNode!.connect(this.vocalMerger!, 0, 1);
-        
+
         this.vocalMerger!.connect(this.vocalReductionGainNode!);
-        
+
         this.vocalOriginalGainNode!.connect(this.vocalOutputNode!);
         this.vocalReductionGainNode!.connect(this.vocalOutputNode!);
 
@@ -528,6 +531,9 @@ try {
         this.convolverWetGain.connect(this.gainNode!);
 
         this.gainNode!.connect(this.ctx.destination);
+        if (this.analyserNode) {
+            this.gainNode!.connect(this.analyserNode);
+        }
 
     }
 
@@ -554,7 +560,8 @@ try {
 
     public setConvolverMix(mix: number): void {
         this.convolverMix = mix;
-        this.convolverDryGain.gain.setValueAtTime(1 - mix, this.ctx.currentTime);
+        const dryVal = Math.max(0, 1 - mix);
+        this.convolverDryGain.gain.setValueAtTime(dryVal, this.ctx.currentTime);
         this.convolverWetGain.gain.setValueAtTime(mix, this.ctx.currentTime);
     }
     // --- END CONVOLVER METHODS ---

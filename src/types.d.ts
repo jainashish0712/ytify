@@ -25,6 +25,7 @@ declare global {
       src: Context;
       id: string;
     };
+    img?: string;
   }
   // For Network Usage
   interface YTItem extends TrackItem {

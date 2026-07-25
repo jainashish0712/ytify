@@ -3,26 +3,78 @@ import './Player.css'
 import { MediaDetails } from "@components/MediaPartials";
 import { config, cssVar } from "@utils";
 import { closeFeature, playerStore, setNavStore, setStore, t, updateParam } from "@stores";
-// import { irsStore, setIrsStore, updateSelectedIrsCategory, updateSelectedIrsFile } from "@stores/irs";
-import { IRS_OPTIONS } from "../../lib/utils/irs";
-import { irsStore, updateSelectedIrsCategory, updateSelectedIrsFile } from "../../lib/stores/irs";
+import { KawarpVisualizer } from '../../kawarp';
+import MediaArtwork from '../../components/MediaPartials/MediaArtwork';
 
-import MediaArtwork from '../../components/MediaPartials/MediaArtwork'
-// const MediaArtwork = lazy(() => import('../../components/MediaPartials/MediaArtwork'));
 const Lyrics = lazy(() => import('./Lyrics'));
 const Video = lazy(() => import('./Video'));
 const Controls = lazy(() => import('./Controls'));
 
 export default function() {
   let playerSection!: HTMLDivElement;
+  let canvasRef!: HTMLCanvasElement;
+  let bgImageRef!: HTMLDivElement;
+  let visualizer: KawarpVisualizer | null = null;
+  let currentBpX = 0;
 
   const [showLyrics, setShowLyrics] = createSignal(false);
-  const [availableIrsFiles, setAvailableIrsFiles] = createSignal(IRS_OPTIONS[0].files);
 
   let touchStartY = 0;
 
+  const handleResize = () => {
+    visualizer?.resize();
+  };
+
+  const handlePointerDown = (e: PointerEvent) => {
+    if (e.button !== 0) return;
+
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('select') ||
+      target.closest('i') ||
+      target.closest('a') ||
+      target.closest('.lyrics') ||
+      target.closest('.watcher')
+    ) {
+      return;
+    }
+
+    const container = e.currentTarget as HTMLElement;
+    container.setPointerCapture(e.pointerId);
+
+    const startX = e.clientX;
+    const initialBpX = currentBpX;
+
+    const onPointerMove = (moveEvent: PointerEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+
+      const rect = playerSection.getBoundingClientRect();
+      const offsetHeight = rect.height;
+      const offsetWidth = rect.width;
+      const diff = Math.max(0, offsetHeight - offsetWidth);
+
+      const targetX = Math.max(-diff, Math.min(0, initialBpX + deltaX));
+      currentBpX = targetX;
+
+      cssVar('--player-bp', `${targetX}px 0`);
+    };
+
+    const onPointerUp = (upEvent: PointerEvent) => {
+      container.releasePointerCapture(upEvent.pointerId);
+      container.removeEventListener('pointermove', onPointerMove);
+      container.removeEventListener('pointerup', onPointerUp);
+      container.removeEventListener('pointercancel', onPointerUp);
+    };
+
+    container.addEventListener('pointermove', onPointerMove);
+    container.addEventListener('pointerup', onPointerUp);
+    container.addEventListener('pointercancel', onPointerUp);
+  };
+
   onMount(() => {
-    setNavStore('player', 'ref', playerSection);
+    setNavStore('player', 'ref', playerSection as unknown as null);
     playerSection.scrollIntoView();
 
     playerSection.addEventListener('touchstart', (e) => {
@@ -37,6 +89,12 @@ export default function() {
         closeFeature('player');
       }
     }, { passive: true });
+
+    // Initialize Kawarp visualizer
+    visualizer = new KawarpVisualizer();
+    visualizer.init(canvasRef);
+
+    window.addEventListener('resize', handleResize);
   });
 
   createEffect(() => {
@@ -44,22 +102,44 @@ export default function() {
       updateParam('s', playerStore.stream.id);
   });
 
+  createEffect(() => {
+    const isPlaying = playerStore.playbackState === 'playing';
+    const isKawarpActive = playerStore.isMusic && !showLyrics() && playerStore.playerBackground !== 'static_artwork';
+    if (visualizer) {
+      if (isPlaying && isKawarpActive) {
+        visualizer.start();
+      } else {
+        visualizer.stop();
+      }
+    }
+  });
+
+  createEffect(() => {
+    const artwork = playerStore.mediaArtwork;
+    currentBpX = 0;
+    cssVar('--player-bp', '0px 0');
+    if (visualizer && artwork && artwork !== 'data:image/png;base64,iVBORw0KGgoAAAANSUhAIjCB0C8AAAAASUVORK5CYII=') {
+      let visualizerCover = artwork;
+      const imgId = playerStore.stream.img;
+      if (imgId && imgId.startsWith('/')) {
+        visualizerCover = `https://wsrv.nl?url=https://yt3.googleusercontent.com${imgId}=w180-h180&output=webp&w=180&h=180&fit=cover`;
+      }
+      console.log("[Kawarp Visualizer Loading Cover URL]:", visualizerCover);
+      visualizer.loadCover(visualizerCover);
+    }
+  });
+
   onCleanup(() => {
     updateParam('s');
+    window.removeEventListener('resize', handleResize);
+    visualizer?.destroy();
+    visualizer = null;
   });
 
   createEffect(() => {
-    const { immersive, mediaArtwork } = playerStore;
-    if (true)
-    // if (immersive)
-      cssVar('--player-bg', `url(${mediaArtwork})`);
-  });
-
-  createEffect(() => {
-    const selectedCategory = IRS_OPTIONS.find(opt => opt.category === irsStore.selectedCategory);
-    if (selectedCategory) {
-      setAvailableIrsFiles(selectedCategory.files);
-    }
+    const { mediaArtwork } = playerStore;
+    console.log("[Player Background Image URL]:", mediaArtwork);
+    cssVar('--player-bg', `url(${mediaArtwork})`);
   });
 
 
@@ -68,17 +148,26 @@ export default function() {
 
     return id;
   }
-
+console.log(144,bgImageRef)
 
   return (
     <section
       id="playerSection"
-      ref={playerSection}>
+      ref={playerSection}
+      onPointerDown={handlePointerDown}>
 
       {/* <Show when={true} > */}
         <div class="bg-pane" />
-        <div class="bg-image" />
-      {/* </Show> */}
+        <canvas
+          class="bg-canvas"
+          ref={canvasRef}
+          style={{ display: (playerStore.isMusic && !showLyrics() && playerStore.playerBackground !== 'static_artwork') ? 'block' : 'none' }}
+        />
+        <div
+          class="bg-image"
+          ref={bgImageRef}
+          style={{ display: (playerStore.isMusic && !showLyrics() && playerStore.playerBackground !== 'static_artwork') ? 'none' : 'block' }}
+        />
 
       <header class="topShelf">
         <p>
@@ -88,28 +177,6 @@ export default function() {
             </Show>
           </Show>
         </p>
-
-        {/* <div class="irs-selectors">
-          <select
-            value={irsStore.selectedCategory}
-            onchange={(e) => updateSelectedIrsCategory(e.currentTarget.value)}
-            aria-label="Select IRS Category"
-          >
-            {IRS_OPTIONS.map(option => (
-              <option value={option.category}>{option.category}</option>
-            ))}
-          </select>
-
-          <select
-            value={irsStore.selectedFile}
-            onchange={(e) => updateSelectedIrsFile(e.currentTarget.value)}
-            aria-label="Select IRS File"
-          >
-            {availableIrsFiles().map(file => (
-              <option value={file.name}>{file.name}</option>
-            ))}
-          </select>
-        </div> */}
 
         <div class="right-group">
 
@@ -136,17 +203,18 @@ export default function() {
           <Lyrics onClose={() => setShowLyrics(false)} />
         </Show>
 
-        <Show when={(!playerStore.isWatching || playerStore.isMusic) && config.loadImage && !showLyrics()}>
-          {/* <MediaArtwork /> */}
-          <></>
-        </Show>
+        <div style={{ display: ((!playerStore.isWatching || playerStore.isMusic) && config.loadImage && !showLyrics() && playerStore.playerBackground === 'kawarp_with_artwork') ? 'contents' : 'none' }}>
+          <MediaArtwork />
+        </div>
 
 
-        <MediaDetails />
+        <div class="details-container">
+          <MediaDetails />
 
-        <Show when={!playerStore.isWatching || playerStore.isMusic}>
-          <Controls showLyrics={showLyrics} setShowLyrics={setShowLyrics} />
-        </Show>
+          <Show when={!playerStore.isWatching || playerStore.isMusic}>
+            <Controls showLyrics={showLyrics} setShowLyrics={setShowLyrics} />
+          </Show>
+        </div>
 
       </article>
     </section>

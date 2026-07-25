@@ -106,6 +106,7 @@ export default function(data: YTItem & {
             author: data.author || '',
             duration: data.duration,
             authorId: data.authorId || '',
+            img: data.img || '',
           });
 
           if (data.albumId)

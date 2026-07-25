@@ -1,6 +1,6 @@
 import { onMount, createEffect, For, createSignal, Show } from "solid-js";
 import './Settings.css';
-import { closeFeature, setNavStore, t, setStore, updateLang } from '@stores';
+import { closeFeature, setNavStore, t, setStore, updateLang, playerStore, setPlayerStore } from '@stores';
 import { Selector } from '@components/Selector.tsx';
 import { config, setConfig, drawer, setDrawer, cssVar, themer, quickSwitch, deleteCollection, getCollection } from '@utils';
 import Dropdown from "./Dropdown";
@@ -195,6 +195,21 @@ export default function() {
             setStore('snackbar', t('settings_reload'));
           }}
         />
+
+        <Selector
+          label='settings_player_background'
+          id='playerBackgroundSelector'
+          onchange={(e) => {
+            const nextMode = e.target.value as 'kawarp_no_artwork' | 'kawarp_with_artwork' | 'static_artwork';
+            setConfig('playerBackground', nextMode);
+            setPlayerStore('playerBackground', nextMode);
+          }}
+          value={playerStore.playerBackground}
+        >
+          <option value="kawarp_no_artwork">{t('settings_player_background_kawarp_no_artwork')}</option>
+          <option value="kawarp_with_artwork">{t('settings_player_background_kawarp_with_artwork')}</option>
+          <option value="static_artwork">{t('settings_player_background_static_artwork')}</option>
+        </Selector>
 
         <Selector
           label='settings_landscape_sections'

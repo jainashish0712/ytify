@@ -223,5 +223,9 @@
   "library_about_ytify": "About ytify",
   "nav_logout": "Logout",
   "player_video_resolution": "Resolution",
-  "updating": "Update in Progress..."
+  "updating": "Update in Progress...",
+  "settings_player_background": "Player Background Mode",
+  "settings_player_background_kawarp_no_artwork": "Kawarp (No Center Artwork)",
+  "settings_player_background_kawarp_with_artwork": "Kawarp (With Center Artwork)",
+  "settings_player_background_static_artwork": "Static Full Artwork"
 }

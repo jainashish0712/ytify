@@ -23,7 +23,7 @@ export default async function(data: TrackItem) {
     album: playerStore.context.src
   };
 
-  const img = generateImageUrl(data.id, 'maxres', music);
+  const img = generateImageUrl(data.img || data.id, 'maxres', music);
   if (config.loadImage) {
 
     setPlayerStore('mediaArtwork', img);

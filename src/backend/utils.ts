@@ -1,13 +1,21 @@
-import { Innertube, UniversalCache, YTNodes, type Helpers } from 'youtubei.js';
+import { Innertube, UniversalCache, YTNodes, type Helpers, Platform } from 'youtubei.js';
+
+Platform.shim.eval = (data: any, env: any) => {
+  return new Function(
+    ...Object.keys(env),
+    data.output
+  )(...Object.values(env));
+};
 
 let youtube: Innertube | null = null;
 
 export async function getClient(): Promise<Innertube> {
   if (!youtube)
     youtube = await Innertube.create({
+      client_name: 'ANDROID',
       cache: new UniversalCache(false),
       generate_session_locally: true,
-      retrieve_player: false,
+      retrieve_player: true,
       fetch: fetch.bind(globalThis)
     });
 

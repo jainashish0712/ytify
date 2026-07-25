@@ -10,21 +10,29 @@ export function generateImageUrl(
   res: string,
   music?: boolean
 ) {
-  const proxy = 'https://wsrv.nl?url=https://';
-  let suffix = '';
-  let prefix = '';
   if (id.startsWith('/')) {
-    prefix = `yt3.googleusercontent.com${id}=s720-c-k-c0x00ffffff-no-rj`;
-    suffix = `&output=webp&w=${res === 'mq' ? '180' : res || '360'}`;
-  }
-  else {
-    prefix = `i.ytimg.com/vi_webp/${id}/${res}default.webp`;
-    if (music) {
-      const s = res === 'mq' ? '180' : '720';
-      suffix = `&w=${s}&h=${s}&fit=cover`;
+    const isPlayingArt = res === 'maxres';
+    if (isPlayingArt) {
+      const url = `https://yt3.googleusercontent.com${id}=w1800-h1800`;
+      console.log("[generateImageUrl] Direct High-Res Cover URL:", url);
+      return url;
+    } else {
+      const url = `https://wsrv.nl?url=https://yt3.googleusercontent.com${id}=w180-h180&output=webp&w=180&h=180&fit=cover`;
+      console.log("[generateImageUrl] Proxied Thumbnail URL:", url);
+      return url;
     }
   }
-  return proxy + prefix + suffix;
+
+  const proxy = 'https://wsrv.nl?url=https://';
+  let suffix = '';
+  let prefix = `i.ytimg.com/vi_webp/${id}/${res}default.webp`;
+  if (music) {
+    const s = res === 'mq' ? '180' : '720';
+    suffix = `&w=${s}&h=${s}&fit=cover`;
+  }
+  const url = proxy + prefix + suffix;
+  console.log("[generateImageUrl] Default YouTube URL:", url);
+  return url;
 }
 
 

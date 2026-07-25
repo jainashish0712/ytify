@@ -8,6 +8,7 @@ import getSearchSuggestions from './getSearchSuggestions.js';
 import getSimilar from './getSimilar.js';
 import getSubFeed from './getSubFeed.js';
 import type { Request, ExecutionContext } from '@cloudflare/workers-types';
+import { getClient } from './utils.js';
 
 const ALLOWED_ORIGINS = [
   'https://ytify.pp.ua',
@@ -51,6 +52,97 @@ export default {
 
     const path = url.pathname.replace(/^\/api\//, '').replace(/^\//, '');
     const searchParams = url.searchParams;
+
+    const isStreamfile = path === 'streamfile' || path.startsWith('streamfile/');
+    if (isStreamfile) {
+      const videoId = path.startsWith('streamfile/') ? path.split('/')[1] : searchParams.get('id');
+      console.log("[streamfile] Request received for videoId:", videoId);
+      if (!videoId || !/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+        console.log("[streamfile] Invalid video ID format:", videoId);
+        return new Response(JSON.stringify({ error: 'Invalid video ID. Must be an 11-character YouTube video ID.' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      try {
+        console.log("[streamfile] Initializing Innertube client...");
+        const yt = await getClient();
+        console.log("[streamfile] Client initialized. Fetching video info...");
+        const info = await yt.getInfo(videoId);
+        console.log("[streamfile] Video Info fetched. Playability status:", JSON.stringify(info.playability_status));
+        console.log("[streamfile] Streaming data exists:", !!info.streaming_data);
+        
+        if (info.streaming_data) {
+          console.log("[streamfile] formats count:", info.streaming_data.formats?.length || 0);
+          console.log("[streamfile] adaptive_formats count:", info.streaming_data.adaptive_formats?.length || 0);
+          if (info.streaming_data.adaptive_formats && info.streaming_data.adaptive_formats.length > 0) {
+            const firstFormat = info.streaming_data.adaptive_formats[0];
+            console.log("[streamfile] First format keys:", Object.keys(firstFormat));
+            console.log("[streamfile] First format sample details:", JSON.stringify({
+              itag: firstFormat.itag,
+              mime_type: firstFormat.mime_type,
+              url: (firstFormat as any).url ? "has url" : "no url",
+              signature_cipher: (firstFormat as any).signature_cipher ? "has signature_cipher" : "no signature_cipher",
+              cipher: (firstFormat as any).cipher ? "has cipher" : "no cipher"
+            }));
+          }
+        }
+
+        console.log("[streamfile] Choosing format...");
+        const format = info.chooseFormat({
+          type: 'audio',
+          quality: 'best'
+        });
+        console.log("[streamfile] Chosen format details:", JSON.stringify({
+          itag: format.itag,
+          mime_type: format.mime_type,
+          url: (format as any).url ? "has url" : "no url",
+          signature_cipher: (format as any).signature_cipher ? "has signature_cipher" : "no signature_cipher",
+          cipher: (format as any).cipher ? "has cipher" : "no cipher"
+        }));
+
+        console.log("[streamfile] Deciphering URL...");
+        const format_url = await format.decipher(yt.session.player);
+        console.log("[streamfile] Deciphered URL:", format_url ? format_url.substring(0, 100) + "..." : "empty");
+
+        if (!format_url) {
+          throw new Error("Deciphered URL is empty");
+        }
+
+        const rangeHeader = request.headers.get('Range');
+        console.log("[streamfile] Range header from request:", rangeHeader);
+        const fetchHeaders: Record<string, string> = {
+          'User-Agent': request.headers.get('User-Agent') || 'Mozilla/5.0'
+        };
+        if (rangeHeader) {
+          fetchHeaders['Range'] = rangeHeader;
+        }
+
+        console.log("[streamfile] Fetching audio data from YouTube...");
+        const response = await fetch(format_url, { headers: fetchHeaders });
+        console.log("[streamfile] Fetch response status:", response.status);
+
+        const responseHeaders = new Headers(response.headers);
+        responseHeaders.set('Access-Control-Allow-Origin', allowedOrigin);
+        responseHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+        responseHeaders.set('Access-Control-Allow-Headers', 'Content-Type');
+        responseHeaders.set('Access-Control-Max-Age', '86400');
+        responseHeaders.set('Vary', 'Origin');
+
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders
+        });
+      } catch (err) {
+        console.error("[streamfile] Error during execution:", err);
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return new Response(JSON.stringify({ error: `Audio extraction failed: ${message}` }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
 
     try {
       let data: unknown;

@@ -295,7 +295,7 @@ export default function Equalizer() {
               <DraggableSlider
                 value={equalizerStore.convolver.mix}
                 min={0}
-                max={1}
+                max={2}
                 step={0.02}
                 onInput={(e) => handleConvolverChange('mix', e)}
                 onChange={(e) => handleConvolverChange('mix', e)}

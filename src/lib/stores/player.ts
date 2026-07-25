@@ -34,7 +34,8 @@ type PlayerStore = {
   videoURL: string,
   isWatching: boolean,
   proxy: string,
-  lrcSync?: (d: number) => void
+  lrcSync?: (d: number) => void,
+  playerBackground: 'kawarp_no_artwork' | 'kawarp_with_artwork' | 'static_artwork'
 };
 
 const createInitialState = (): PlayerStore => ({
@@ -63,7 +64,8 @@ const createInitialState = (): PlayerStore => ({
   audioURL: '',
   videoURL: '',
   isWatching: Boolean(config.watchMode),
-  proxy: ''
+  proxy: '',
+  playerBackground: (config.playerBackground || 'kawarp_no_artwork') as 'kawarp_no_artwork' | 'kawarp_with_artwork' | 'static_artwork'
 });
 
 export const [playerStore, setPlayerStore] = createStore(createInitialState());
