@@ -1,9 +1,10 @@
 import { Kawarp } from '@kawarp/core';
 import { playerStore, equalizerInstance } from '@stores';
+import { cssVar } from '@utils';
 
 const KAWARP_DEFAULTS = {
-    warpIntensity: 2,
-    blurPasses: 4,
+    warpIntensity: 1,
+    blurPasses: 3,
     animationSpeed: 1,
     transitionDuration: 4000,
     saturation: 1.2,
@@ -14,10 +15,10 @@ const KAWARP_DEFAULTS = {
 };
 
 
-const BEAT_THRESHOLD = 0.65;
-const SPEED_MULTIPLIER = 4;
-const SCALE_BOOST_PCT = 2;
-const BOOSTED_SCALE = KAWARP_DEFAULTS.scale + SCALE_BOOST_PCT / 60;
+const BEAT_THRESHOLD = 0.85;
+const SPEED_MULTIPLIER = 16;
+const SCALE_BOOST_PCT = 8;
+const BOOSTED_SCALE = KAWARP_DEFAULTS.scale + SCALE_BOOST_PCT / 70;
 const SCALE_LERP_UP = 0.5;
 const SCALE_LERP_DOWN = 0.12;
 const SCALE_THRESHOLD = 0.001;
@@ -31,6 +32,8 @@ export class KawarpVisualizer {
   private _lastCoverUrl: string | null = null;
   private _currentScale = KAWARP_DEFAULTS.scale;
   private _targetScale = KAWARP_DEFAULTS.scale;
+  private _currentArtworkScale = 1.0;
+  private _targetArtworkScale = 1.0;
   private _lastAnalysisTime = 0;
   private _animationFrameId: number | null = null;
   private _isLooping = false;
@@ -144,6 +147,7 @@ export class KawarpVisualizer {
         : KAWARP_DEFAULTS.animationSpeed;
 
       this._targetScale = isBeat ? BOOSTED_SCALE : KAWARP_DEFAULTS.scale;
+      this._targetArtworkScale = isBeat ? 1.03 : 1.0;
 
       this._lastAnalysisTime = now;
     }
@@ -154,6 +158,17 @@ export class KawarpVisualizer {
       const lerp = diff > 0 ? SCALE_LERP_UP : SCALE_LERP_DOWN;
       this._currentScale += diff * lerp;
       this.kawarp.scale = this._currentScale;
+    }
+
+    // Artwork scale lerp
+    const artDiff = this._targetArtworkScale - this._currentArtworkScale;
+    if (Math.abs(artDiff) > 0.001) {
+      const lerp = artDiff > 0 ? 0.3 : 0.08;
+      this._currentArtworkScale += artDiff * lerp;
+      cssVar('--artwork-scale', String(this._currentArtworkScale));
+    } else if (this._currentArtworkScale !== this._targetArtworkScale) {
+      this._currentArtworkScale = this._targetArtworkScale;
+      cssVar('--artwork-scale', String(this._currentArtworkScale));
     }
   }
 
@@ -174,5 +189,8 @@ export class KawarpVisualizer {
     this._lastCoverUrl = null;
     this._currentScale = KAWARP_DEFAULTS.scale;
     this._targetScale = KAWARP_DEFAULTS.scale;
+    cssVar('--artwork-scale', '1');
+    this._currentArtworkScale = 1.0;
+    this._targetArtworkScale = 1.0;
   }
 }

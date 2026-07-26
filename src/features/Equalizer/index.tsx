@@ -118,6 +118,15 @@ export default function Equalizer() {
       equalizerInstance.setReverbMix(0);
     }
   };
+  const resetMix = () => {
+    setEqualizerStore('convolver', { impulse: '/irs/testeqapo3.wav', mix: 1 });
+    if (equalizerInstance) {
+
+      equalizerInstance.setConvolverMix(1);
+      equalizerInstance.setConvolverImpulse('/irs/testeqapo3.wav');
+
+    }
+  };
   const resetLPF = () => {
     setEqualizerStore('lpf', { frequency: 22050, peak: 1 });
     if (equalizerInstance) {
@@ -144,9 +153,9 @@ export default function Equalizer() {
                 <div class="eq-slider-holder">
                   <input
                     type="range"
-                    min="-12"
-                    max="12"
-                    step="0.1"
+                    min="-8"
+                    max="8"
+                    step="0.4"
                     value={equalizerStore.bandGains[i()]}
                     onInput={(e) => handleGainChange(i(), e)}
                   />
@@ -175,7 +184,7 @@ export default function Equalizer() {
                 value={equalizerStore.pitch}
                 min={-5}
                 max={5}
-                step={0.1}
+                step={0.2}
                 onInput={handlePitchChange}
                 onChange={handlePitchChange}
                 formatValue={(v) => v.toFixed(2) + ' st'}
@@ -256,7 +265,9 @@ export default function Equalizer() {
         </div>
 
         <div class="eq-convolver-wrapper">
-          <div class="eq-convolver-header">
+          <div class="eq-convolver-header"
+          onclick={resetMix}
+          >
             <span>Convolver</span>
           </div>
 
@@ -294,8 +305,8 @@ export default function Equalizer() {
             /> */}
               <DraggableSlider
                 value={equalizerStore.convolver.mix}
-                min={0}
-                max={2}
+                min={0.7}
+                max={1}
                 step={0.02}
                 onInput={(e) => handleConvolverChange('mix', e)}
                 onChange={(e) => handleConvolverChange('mix', e)}

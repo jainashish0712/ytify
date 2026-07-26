@@ -36,11 +36,11 @@
     background-image: var(--player-bg);
     background-repeat: no-repeat;
     background-attachment: scroll;
-    background-size: auto 100%;
+    background-size: auto calc(100% * var(--bg-zoom-scale, 1));
     background-position: var(--player-bp, 50% 50%);
     transition: background-position 0.3s ease;
     z-index: 0;
-    filter: brightness(1.1) saturate(1);
+    filter: brightness(1.1) saturate(1.1);
 
   }
 
@@ -102,9 +102,10 @@
     margin: 0 auto;
     border-radius: var(--roundness);
     box-shadow: 0 49px 64px #00000078;
-    width: 95%;
+    width: 100%;
   /* margin: 0 0 20% 0; */
-
+    transform: scale(var(--artwork-scale, 1));
+    will-change: transform;
   }
 
 
@@ -139,7 +140,7 @@
 
 .mediaDetails {
 
-  margin: var(--size-3) 0;
+  margin: 10px 0 6px 0;
 
   a {
     display: block;

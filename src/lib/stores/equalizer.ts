@@ -560,8 +560,7 @@ try {
 
     public setConvolverMix(mix: number): void {
         this.convolverMix = mix;
-        const dryVal = Math.max(0, 1 - mix);
-        this.convolverDryGain.gain.setValueAtTime(dryVal, this.ctx.currentTime);
+        this.convolverDryGain.gain.setValueAtTime(1 - mix, this.ctx.currentTime);
         this.convolverWetGain.gain.setValueAtTime(mix, this.ctx.currentTime);
     }
     // --- END CONVOLVER METHODS ---
