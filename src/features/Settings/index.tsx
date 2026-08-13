@@ -186,6 +186,7 @@ export default function() {
           }}
         />
 
+
         {/* Personalize Settings */}
         <Toggle
           name='settings_load_images'

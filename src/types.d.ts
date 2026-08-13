@@ -119,4 +119,12 @@ declare global {
   }
 }
 
+declare module 'solid-js' {
+  namespace JSX {
+    interface IntrinsicElements {
+      'am-lyrics': any;
+    }
+  }
+}
+
 export { };

@@ -45,13 +45,23 @@ export async function player(id?: string) {
 
   const invidiousData = data as Invidious;
 
+  let imgPath = '';
+  const authorThumb = (invidiousData as any).authorThumbnails?.[0]?.url || '';
+  if (authorThumb.includes('yt3.googleusercontent.com')) {
+    const parts = authorThumb.split('yt3.googleusercontent.com');
+    if (parts.length > 1) {
+      imgPath = parts[1].split('=')[0]; // e.g. "/FQsPsZdaGUkT3_Q-9iilsYnS6xc0CAerb6pIhUou-skal6-jMQQ-xUigopbvfqVP_e-msHiabmCN2wCl"
+    }
+  }
+
   await import('../modules/setMetadata')
     .then(mod => mod.default({
       id,
       title: invidiousData.title,
       author: invidiousData.author,
       duration: convertSStoHHMMSS(invidiousData.lengthSeconds),
-      authorId: invidiousData.authorId
+      authorId: invidiousData.authorId,
+      img: imgPath || undefined
     }));
 
   import('../modules/setAudioStreams')

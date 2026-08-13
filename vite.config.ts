@@ -1,4 +1,4 @@
-import { defineConfig, PluginOption } from 'vite';
+import { defineConfig, PluginOption, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import solidPlugin from 'vite-plugin-solid';
 import autoprefixer from 'autoprefixer';
@@ -9,12 +9,21 @@ import { readdirSync } from 'fs';
 import path from 'path';
 
 
-export default defineConfig(({ command }) => ({
-  base: process.env.VITE_BASE_PATH || '/',
-  define: {
-    Locales: readdirSync(resolve(__dirname, './src/locales')).map(file => file.slice(0, 2)),
-    Build: JSON.stringify('v' + require('./package.json').version),
-  },
+export default defineConfig(({ mode, command }) => {
+  const rootEnv = loadEnv(mode, process.cwd(), '');
+  const srcEnv = loadEnv(mode, resolve(__dirname, './src'), '');
+  const youtubeApiKey = rootEnv.YOUTUBE_API_KEY || rootEnv.VITE_YOUTUBE_API_KEY ||
+    srcEnv.YOUTUBE_API_KEY || srcEnv.VITE_YOUTUBE_API_KEY ||
+    process.env.YOUTUBE_API_KEY || process.env.VITE_YOUTUBE_API_KEY || '';
+
+  return {
+    base: process.env.VITE_BASE_PATH || '/',
+    define: {
+      Locales: readdirSync(resolve(__dirname, './src/locales')).map(file => file.slice(0, 2)),
+      Build: JSON.stringify('v' + require('./package.json').version),
+      'import.meta.env.YOUTUBE_API_KEY': JSON.stringify(youtubeApiKey),
+      'import.meta.env.VITE_YOUTUBE_API_KEY': JSON.stringify(youtubeApiKey),
+    },
   resolve: {
     alias: {
       '@stores': path.resolve(__dirname, './src/lib/stores'),
@@ -26,7 +35,7 @@ export default defineConfig(({ command }) => ({
   },
   plugins: [
     solidPlugin(),
-    injectEruda(command === 'serve'),
+    // injectEruda(command === 'serve'),
     apiMiddleware(command === 'serve'),
     VitePWA({
       manifest: {
@@ -114,7 +123,8 @@ export default defineConfig(({ command }) => ({
       ]
     }
   }
-}));
+};
+});
 
 
 const injectEruda = (serve: boolean) => serve ? (<PluginOption>{
