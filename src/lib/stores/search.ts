@@ -91,40 +91,20 @@ export async function getSearchResults(force = false) {
     setDrawer('recentSearches', recentSearches);
   }
 
-  const apiKey = (import.meta.env.YOUTUBE_API_KEY as string | undefined) ||
-    (import.meta.env.VITE_YOUTUBE_API_KEY as string | undefined);
+  const url = `${store.api}/search?q=${encodeURIComponent(query)}&f=${searchFilter}`;
 
-    console.log("97",apiKey);//97 <empty string>
-
-  if (apiKey) {
-    import('@modules/youtubeApi')
-      .then(mod => mod.searchYouTubeDataApi(query, apiKey))
-      .then(data => {
-        setSearchStore('results', data);
-      })
-      .catch(e => {
-        setStore('snackbar', e.message);
-        setSearchStore('results', []);
-      })
-      .finally(() => {
-        setSearchStore('isLoading', false);
-      });
-  } else {
-    const url = `${store.api}/search?q=${encodeURIComponent(query)}&f=${searchFilter}`;
-
-    fetch(url)
-      .then(res => res.json() as Promise<(YTItem | YTListItem)[]>)
-      .then(data => {
-        setSearchStore('results', data);
-      })
-      .catch(e => {
-        setStore('snackbar', e.message);
-        setSearchStore('results', []);
-      })
-      .finally(() => {
-        setSearchStore('isLoading', false);
-      });
-  }
+  fetch(url)
+    .then(res => res.json() as Promise<(YTItem | YTListItem)[]>)
+    .then(data => {
+      setSearchStore('results', data);
+    })
+    .catch(e => {
+      setStore('snackbar', e.message);
+      setSearchStore('results', []);
+    })
+    .finally(() => {
+      setSearchStore('isLoading', false);
+    });
 
   updateParam('q', query);
   updateParam('f', searchFilter === 'all' ? '' : searchFilter);

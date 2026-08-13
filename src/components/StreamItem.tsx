@@ -1,6 +1,6 @@
 import { Accessor, Show, createSignal } from 'solid-js';
 import './StreamItem.css';
-import { config, hostResolver, player, removeFromCollection, getCollectionItems, generateImageUrl, generateImageUrlHighRes, longIdCache } from '@utils';
+import { config, hostResolver, player, removeFromCollection, getCollectionItems, generateImageUrl } from '@utils';
 import { setStore, store, setQueueStore, listStore, navStore, setNavStore, playerStore, setPlayerStore } from '@stores';
 
 export default function(data: YTItem & {
@@ -55,17 +55,12 @@ export default function(data: YTItem & {
 
 
 
-  if (data.img && data.img.startsWith('/')) {
-    longIdCache.set(data.id, data.img);
-  }
-
   const isAlbum = data.context?.id.startsWith('MPREb') || listStore.type === 'album';
   const isFromArtist = data.context?.id?.startsWith('Artist - ');
   const isMusic = data.author?.endsWith('- Topic');
-  const isMusicTrack = data.type === 'song' || isMusic || data.author?.endsWith(' - Topic') || data.context?.id === 'favorites' || isFromArtist;
 
   if (config.loadImage && !isAlbum)
-    setImage(generateImageUrl(data.img || data.id, 'mq', isMusicTrack));
+    setImage(generateImageUrl(data.img || data.id, 'mq', data.context?.id === 'favorites' || isFromArtist || ((data.context?.src === 'queue') && isMusic)));
 
   return (
     <a
@@ -103,9 +98,6 @@ export default function(data: YTItem & {
         }
 
         if (!e.target.classList.contains('ri-more-2-fill')) {
-          if (data.img && data.img.startsWith('/')) {
-            longIdCache.set(data.id, data.img);
-          }
 
 
           setPlayerStore('stream', {
@@ -116,8 +108,6 @@ export default function(data: YTItem & {
             authorId: data.authorId || '',
             img: data.img || '',
           });
-
-          setPlayerStore('mediaArtwork', generateImageUrlHighRes(data.img || data.id, isMusicTrack));
 
           if (data.albumId)
             setPlayerStore('stream', 'albumId', data.albumId);

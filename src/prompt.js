@@ -23,11 +23,4 @@ prompt.txt
  backdrop-filter: blur(10px); for the entire container and all elements inside it
 
 
- 7) [plugin:vite:import-analysis] Failed to resolve entry for package "@uimaxbai/am-lyrics". The package may have incorrect main/module/exports specified in its package.json.
-
-D:/gitRepo/New folder (12)/ytify/src/features/Player/Lyrics.tsx:3:7
-
-6  |  import { onCleanup } from "solid-js";
-7  |  import { playerStore } from "@stores";
-8  |  import "@uimaxbai/am-lyrics";
-   |          ^
+ 7) increase convolver mix past 100% to 200% atleast

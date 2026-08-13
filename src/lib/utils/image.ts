@@ -1,45 +1,8 @@
 import { playerStore } from '@stores';
 import { config } from '@utils';
 
-export const longIdCache = new Map<string, string>();
-
-function extractGoogleUserContentId(url: string): string | null {
-  if (!url) return null;
-  if (url.includes('googleusercontent.com') || url.includes('ggpht.com')) {
-    const parts = url.split(/(?:googleusercontent\.com|ggpht\.com)/);
-    if (parts.length > 1) {
-      const path = parts[1].split('=')[0];
-      if (path && path.startsWith('/')) {
-        return path;
-      }
-    }
-  }
-  return null;
-}
 
 // Generates both channel and stream thumbnails
-
-
-export function generateImageUrlHighRes(
-  id: string,
-  music?: boolean
-) {
-  if (id.startsWith('/')) {
-    const url = `https://yt3.googleusercontent.com${id}=w1800-h1800`;
-    console.log("[generateImageUrlHighRes] Direct High-Res Cover URL:", url);
-    return url;
-  }
-
-  const proxy = 'https://wsrv.nl?url=https://';
-  let suffix = '';
-  let prefix = `i.ytimg.com/vi_webp/${id}/maxresdefault.webp`;
-  if (music) {
-    suffix = `&w=1920&h=1920&fit=cover`;
-  }
-  const url = proxy + prefix + suffix;
-  console.log("[generateImageUrlHighRes] High-Res YouTube URL:", url);
-  return url;
-}
 
 
 export function generateImageUrl(
@@ -47,20 +10,6 @@ export function generateImageUrl(
   res: string,
   music?: boolean
 ) {
-  if (res === 'maxres') {
-    const currentPlayingId = playerStore.stream.id;
-    if (currentPlayingId && longIdCache.has(currentPlayingId)) {
-      id = longIdCache.get(currentPlayingId)!;
-    } else {
-      const authorThumb = (playerStore.data as any)?.authorThumbnails?.[0]?.url || '';
-      const extractedId = extractGoogleUserContentId(authorThumb);
-      if (extractedId) {
-        id = extractedId;
-      }
-    }
-    return generateImageUrlHighRes(id, music);
-  }
-
   if (id.startsWith('/')) {
     const isPlayingArt = res === 'maxres';
     if (isPlayingArt) {

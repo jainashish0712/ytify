@@ -248,7 +248,7 @@ export default function (_: {
           <option value="4.00">4.00x</option>
         </select>
 
-        <Show when={playerStore.isMusic && playerStore.playerBackground !== 'static_artwork'}>
+        <Show when={playerStore.isMusic}>
           <i
             aria-label={t('player_lyrics')}
             class="ri-music-2-line"

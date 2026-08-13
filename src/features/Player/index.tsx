@@ -36,8 +36,7 @@ export default function() {
       target.closest('i') ||
       target.closest('a') ||
       target.closest('.lyrics') ||
-      target.closest('.watcher') ||
-      target.closest('.slider')
+      target.closest('.watcher')
     ) {
       return;
     }
@@ -79,18 +78,10 @@ export default function() {
     playerSection.scrollIntoView();
 
     playerSection.addEventListener('touchstart', (e) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('input') || target.closest('.slider') || target.closest('[class*="slider"]')) {
-        return;
-      }
       touchStartY = e.touches[0].clientY;
     }, { passive: true });
 
     playerSection.addEventListener('touchmove', (e) => {
-      const target = e.target as HTMLElement;
-      if (target.closest('input') || target.closest('.slider') || target.closest('[class*="slider"]')) {
-        return;
-      }
       const touchY = e.touches[0].clientY;
       const deltaY = touchY - touchStartY;
 
@@ -112,14 +103,8 @@ export default function() {
   });
 
   createEffect(() => {
-    if (playerStore.playerBackground === 'static_artwork') {
-      setShowLyrics(false);
-    }
-  });
-
-  createEffect(() => {
     const isPlaying = playerStore.playbackState === 'playing';
-    const isKawarpActive = playerStore.isMusic && playerStore.playerBackground !== 'static_artwork';
+    const isKawarpActive = playerStore.isMusic && !showLyrics() && playerStore.playerBackground !== 'static_artwork';
     if (visualizer) {
       if (isPlaying && isKawarpActive) {
         visualizer.start();
@@ -176,41 +161,39 @@ console.log(144,bgImageRef)
         <canvas
           class="bg-canvas"
           ref={canvasRef}
-          style={{ display: (playerStore.isMusic && playerStore.playerBackground !== 'static_artwork') ? 'block' : 'none' }}
+          style={{ display: (playerStore.isMusic && !showLyrics() && playerStore.playerBackground !== 'static_artwork') ? 'block' : 'none' }}
         />
         <div
           class="bg-image"
           ref={bgImageRef}
-          style={{ display: (playerStore.isMusic && playerStore.playerBackground !== 'static_artwork') ? 'none' : 'block' }}
+          style={{ display: (playerStore.isMusic && !showLyrics() && playerStore.playerBackground !== 'static_artwork') ? 'none' : 'block' }}
         />
 
-      <Show when={!showLyrics()}>
-        <header class="topShelf">
-          <p>
-            <Show when={playerStore.context.src}>
-              <Show when={playerStore.context.src === 'queue'} fallback={t('player_from', getContext())}>
-                {getContext()}
-              </Show>
+      <header class="topShelf">
+        <p>
+          <Show when={playerStore.context.src}>
+            <Show when={playerStore.context.src === 'queue'} fallback={t('player_from', getContext())}>
+              {getContext()}
             </Show>
-          </p>
+          </Show>
+        </p>
 
-          <div class="right-group">
+        <div class="right-group">
 
-            <i
-              aria-label={t('close')}
-              onclick={() => { closeFeature('player') }}
-              class="ri-close-large-line"></i>
-
-          </div>
           <i
-            aria-label={t('player_more')}
-            class="ri-more-2-fill"
-            id="moreBtn"
-            onclick={() => setStore('actionsMenu', playerStore.stream)}
-          ></i>
-        </header>
-      </Show>
-      <article style={showLyrics() ? { height: '90%', width: '100%' } : {}}>
+            aria-label={t('close')}
+            onclick={() => { closeFeature('player') }}
+            class="ri-close-large-line"></i>
+
+        </div>
+        <i
+          aria-label={t('player_more')}
+          class="ri-more-2-fill"
+          id="moreBtn"
+          onclick={() => setStore('actionsMenu', playerStore.stream)}
+        ></i>
+      </header>
+      <article>
 
         <Show when={playerStore.isWatching && !playerStore.isMusic}>
           <Video />
@@ -224,15 +207,14 @@ console.log(144,bgImageRef)
           <MediaArtwork />
         </div>
 
-        <Show when={!showLyrics()}>
-          <div class="details-container">
-            <MediaDetails />
 
-            <Show when={!playerStore.isWatching || playerStore.isMusic}>
-              <Controls showLyrics={showLyrics} setShowLyrics={setShowLyrics} />
-            </Show>
-          </div>
-        </Show>
+        <div class="details-container">
+          <MediaDetails />
+
+          <Show when={!playerStore.isWatching || playerStore.isMusic}>
+            <Controls showLyrics={showLyrics} setShowLyrics={setShowLyrics} />
+          </Show>
+        </div>
 
       </article>
     </section>
